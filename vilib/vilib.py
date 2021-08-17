@@ -20,13 +20,20 @@ from picamera.array import PiRGBArray
 from picamera import PiCamera
 from PIL import Image, ImageDraw, ImageFont
 import threading
-from ezblock import run_command
+
 
 
 import json
 
 
-
+def run_command(cmd):
+    import subprocess
+    p = subprocess.Popen(
+        cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    result = p.stdout.read().decode('utf-8')
+    status = p.poll()
+    return status, result
+    
 traffic_num_list = [i for i in range(4)]
 ges_num_list = [i for i in range(3)]
 

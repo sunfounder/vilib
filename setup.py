@@ -2,12 +2,13 @@
 from setuptools import setup, find_packages
 # To use a consistent encoding
 from codecs import open
-from os import path
+import sys 
+import os
 
-here = path.abspath(path.dirname(__file__))
+here = os.path.abspath(os.path.dirname(__file__))
 
 # Get the long description from the relevant file
-with open(path.join(here, 'DESCRIPTION.rst'), encoding='utf-8') as f:
+with open(os.path.join(here, 'DESCRIPTION.rst'), encoding='utf-8') as f:
     long_description = f.read()
 
 
@@ -66,7 +67,7 @@ setup(
     # your project is installed. For an analysis of "install_requires" vs pip's
     # requirements files see:
     # https://packaging.python.org/en/latest/requirements.html
-    install_requires=['robot_hat'],
+    install_requires=['picamera','imutils'],
  
     # To provide executable scripts, use entry points in preference to the
     # "scripts" keyword. Entry points provide cross-platform support and allow
@@ -77,3 +78,39 @@ setup(
         ],
     },
 )
+
+
+if sys.argv[-1] == 'install':
+
+    os.system('sudo apt update')
+    # install cmake
+    os.system('sudo apt install cmake -y')
+    # install opencv
+    os.system('sudo pip3 install pillow')
+    os.system('sudo pip3 install numpy')  
+    os.system('sudo apt install libjpeg-dev -y')
+    os.system('sudo apt install libatlas-base-dev -y')
+    os.system('sudo apt install libjpeg-dev -y')
+    os.system('sudo apt install libtiff5-dev -y')
+    os.system('sudo apt install li.jpg12-dev -y')
+    os.system('sudo apt install libqtgui4 libqt4-test -y')
+    os.system('sudo apt install libjasper-dev -y')
+    os.system('sudo pip3 install opencv-contrib-python')
+    # install tflite
+    os.system('sudo pip3 install https://dl.google.com/coral/python/tflite_runtime-2.1.0.post1-cp37-cp37m-linux_armv7l.whl')
+    # install face_recognition
+    os.system('sudo apt install build-essential cmake libgtk-3-dev libboost-all-dev -y')
+    os.system('sudo pip3 install dlib')
+    os.system('sudo pip3 install face_recognition')
+    # install Flask
+    os.system('sudo pip3 install Flask')
+    # install picamera
+    os.system('sudo pip3 install picamera')
+    # install pyzbar
+    os.system('sudo pip3 install pyzbar')
+    
+    
+    
+    
+    
+    
