@@ -3,12 +3,12 @@ from setuptools import setup, find_packages
 # To use a consistent encoding
 from codecs import open
 import sys 
-import os
+from os import path,system
 
-here = os.path.abspath(os.path.dirname(__file__))
+here = path.abspath(path.dirname(__file__))
 
 # Get the long description from the relevant file
-with open(os.path.join(here, 'DESCRIPTION.rst'), encoding='utf-8') as f:
+with open(path.join(here, 'DESCRIPTION.rst'), encoding='utf-8') as f:
     long_description = f.read()
 
 
@@ -80,37 +80,73 @@ setup(
 )
 
 
+errors = []
+
+def do(msg="", cmd=""):
+    print(" - %s..." % (msg), end='\r')
+    print(" - %s... " % (msg), end='')
+    status, result = eval(cmd)
+    # print(status, result)
+    if status == 0 or status == None or result == "":
+        print('Done')
+    else:
+        print('Error')
+        errors.append("%s error:\n  Status:%s\n  Error:%s" %
+                      (msg, status, result))
+
+def run_command(cmd=""):
+    import subprocess
+    p = subprocess.Popen(
+        cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    result = p.stdout.read().decode('utf-8')
+    status = p.poll()
+    # print(result)
+    # print(status)
+    return status, result
+
 if sys.argv[-1] == 'install':
 
-    os.system('sudo apt update')
+    system('sudo apt update')
     # install cmake
-    os.system('sudo apt install cmake -y')
+    system('sudo apt install cmake -y')
     # install opencv
-    os.system('sudo pip3 install pillow')
-    os.system('sudo pip3 install numpy')  
-    os.system('sudo apt install libjpeg-dev -y')
-    os.system('sudo apt install libatlas-base-dev -y')
-    os.system('sudo apt install libjpeg-dev -y')
-    os.system('sudo apt install libtiff5-dev -y')
-    os.system('sudo apt install li.jpg12-dev -y')
-    os.system('sudo apt install libqtgui4 libqt4-test -y')
-    os.system('sudo apt install libjasper-dev -y')
-    os.system('sudo pip3 install opencv-contrib-python')
+    # system('sudo pip3 install pillow')
+    # system('sudo pip3 install numpy')  
+    # system('sudo apt install libjpeg-dev -y')
+    # system('sudo apt install libatlas-base-dev -y')
+    # system('sudo apt install libjpeg-dev -y')
+    # system('sudo apt install libtiff5-dev -y')
+    # system('sudo apt-get install libhdf5-dev -y') 
+    # system('sudo apt-get install libhdf5-serial-dev -y') 
+    # system('sudo apt install li.jpg12-dev -y')
+    # system('sudo apt install libqtgui4 libqt4-test -y')
+    # system('sudo apt install libjasper-dev -y')
+
+    system('sudo pip3 install opencv-contrib-python')
     # install tflite
-    os.system('sudo pip3 install https://dl.google.com/coral/python/tflite_runtime-2.1.0.post1-cp37-cp37m-linux_armv7l.whl')
+    system('sudo pip3 install https://dl.google.com/coral/python/tflite_runtime-2.1.0.post1-cp37-cp37m-linux_armv7l.whl')
     # install face_recognition
-    os.system('sudo apt install build-essential cmake libgtk-3-dev libboost-all-dev -y')
-    os.system('sudo pip3 install dlib')
-    os.system('sudo pip3 install face_recognition')
+    system('sudo apt install build-essential cmake libgtk-3-dev libboost-all-dev -y')
+    system('sudo pip3 install dlib')
+    system('sudo pip3 install face_recognition')
     # install Flask
-    os.system('sudo pip3 install Flask')
+    system('sudo pip3 install Flask')
     # install picamera
-    os.system('sudo pip3 install picamera')
+    system('sudo pip3 install picamera')
     # install pyzbar
-    os.system('sudo pip3 install pyzbar')
+    system('sudo pip3 install pyzbar')
     
     
-    
+    print("Create workspace")
+    _, result = run_command("ls /opt")
+    if "vilib" not in result:
+        do(msg="create dir",
+            cmd='run_command("mkdir /opt/vilib")')
+    do(msg="copy workspace",
+        cmd='run_command("sudo cp -r ./workspace/* /opt/vilib/")')
+
+    # do(msg="add write permission to log file",
+    #     cmd='run_command("sudo chmod 666 /opt/vilib/log")')
     
     
     

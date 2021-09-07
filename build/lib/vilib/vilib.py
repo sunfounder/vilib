@@ -1,10 +1,9 @@
 from typing import Text
-from .face import Face
 import numpy as np
 import cv2
 import threading
 
-
+from .face import Face
 
 from importlib import import_module
 import os
@@ -19,19 +18,12 @@ from picamera.array import PiRGBArray
 from picamera import PiCamera
 from PIL import Image, ImageDraw, ImageFont
 import threading
-
+from ezblock import run_command
 
 
 import json
 
 
-def run_command(cmd):
-    import subprocess
-    p = subprocess.Popen(
-        cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-    result = p.stdout.read().decode('utf-8')
-    status = p.poll()
-    return status, result
 
 traffic_num_list = [i for i in range(4)]
 ges_num_list = [i for i in range(3)]
@@ -46,8 +38,8 @@ ges_dict = dict(zip(ges_num_list,gesture_list))
 
 
 
-traffic_sign_model_path = "/opt/vilib/tf_150_dr0.2.tflite"    # 模型路径
-gesture_model_path = "/opt/vilib/3bak_ges_200_dr0.2.tflite"
+traffic_sign_model_path = "/opt/ezblock/tf_150_dr0.2.tflite"    # 模型路径
+gesture_model_path = "/opt/ezblock/3bak_ges_200_dr0.2.tflite"
 
 
 interpreter_1 = tflite.Interpreter(model_path=traffic_sign_model_path)    # tflite读取模型
@@ -159,9 +151,9 @@ Camera_SETTING = [
 ]
 
 # 相片水印
-time_font = lambda x: ImageFont.truetype('/opt/vilib/Roboto-Light-2.ttf', int(x / 320.0 * 6))
-text_font = lambda x: ImageFont.truetype('/opt/vilib/Roboto-Light-2.ttf', int(x / 320.0 * 10))
-company_font = lambda x: ImageFont.truetype('/opt/vilib/Roboto-Light-2.ttf', int(x / 320.0 * 8))
+time_font = lambda x: ImageFont.truetype('/opt/ezblock/Roboto-Light-2.ttf', int(x / 320.0 * 6))
+text_font = lambda x: ImageFont.truetype('/opt/ezblock/Roboto-Light-2.ttf', int(x / 320.0 * 10))
+company_font = lambda x: ImageFont.truetype('/opt/ezblock/Roboto-Light-2.ttf', int(x / 320.0 * 8))
 
 # 添加水印接口
 def add_text_to_image(name, text_1):
@@ -192,13 +184,13 @@ class Vilib(object):
     video_flag = False
 
 # 读取人脸识别模型
-    face_cascade = cv2.CascadeClassifier('/opt/vilib/haarcascade_frontalface_default.xml') 
+    face_cascade = cv2.CascadeClassifier('/opt/ezblock/haarcascade_frontalface_default.xml') 
     kernel_5 = np.ones((5,5),np.uint8)#4x4的卷积核
 
     video_source = 0
 
 # 用于寻找手势识别的肤色的区域的模板图片，可以通过手势识别的校准功能更改图片
-    roi = cv2.imread("/opt/vilib/cali.jpg")
+    roi = cv2.imread("/opt/ezblock/cali.jpg")
     roi_hsv = cv2.cvtColor(roi, cv2.COLOR_BGR2HSV)
 
 # 创建共享字典，提供外部接口动态修改，以及返回字典内容
@@ -212,36 +204,36 @@ class Vilib(object):
     color_dict = {'red':[0,4],'orange':[5,18],'yellow':[22,37],'green':[42,85],'blue':[92,110],'purple':[115,165],'red_2':[165,180]}
 
 # color_obj_parameter
-    detect_obj_parameter['color_x'] = 320       # 最大色块中心坐标 x
-    detect_obj_parameter['color_y'] = 240       # 最大色块中心坐标 x
-    detect_obj_parameter['color_w'] = 0         # 最大色块 宽
-    detect_obj_parameter['color_h'] = 0         # 最大色块 高
-    detect_obj_parameter['color_n'] = 0         # 识别到的色块个数
+    detect_obj_parameter['color_x'] = 320
+    detect_obj_parameter['color_y'] = 240
+    detect_obj_parameter['color_w'] = 0
+    detect_obj_parameter['color_h'] = 0
+    detect_obj_parameter['color_n'] = 0
     detect_obj_parameter['lower_color'] = np.array([min(color_dict[detect_obj_parameter['color_default']]), 60, 60]) 
     detect_obj_parameter['upper_color'] = np.array([max(color_dict[detect_obj_parameter['color_default']]), 255, 255])
     
 
 # Human_obj_parameter
-    detect_obj_parameter['human_x'] = 320       # 最大人脸中心坐标 x
-    detect_obj_parameter['human_y'] = 240       # 最大人脸中心坐标 x
-    detect_obj_parameter['human_w'] = 0         # 最大人脸 宽
-    detect_obj_parameter['human_h'] = 0         # 最大人脸 高
-    detect_obj_parameter['human_n'] = 0         # 识别到的人脸个数
+    detect_obj_parameter['human_x'] = 320
+    detect_obj_parameter['human_y'] = 240
+    detect_obj_parameter['human_w'] = 0
+    detect_obj_parameter['human_h'] = 0
+    detect_obj_parameter['human_n'] = 0
 
 # traffic_sign_obj_parameter
-    detect_obj_parameter['traffic_sign_x'] = 320        # 中心坐标 x
-    detect_obj_parameter['traffic_sign_y'] = 240        # 中心坐标 x
-    detect_obj_parameter['traffic_sign_w'] = 0          # 宽
-    detect_obj_parameter['traffic_sign_h'] = 0          # 高
-    detect_obj_parameter['traffic_sign_t'] = 'None'     # 标志文本 traffic_list = ['stop','right','left','forward'] 或 'none' 
-    detect_obj_parameter['traffic_sign_acc'] = 0        
+    detect_obj_parameter['traffic_sign_x'] = 320
+    detect_obj_parameter['traffic_sign_y'] = 240
+    detect_obj_parameter['traffic_sign_w'] = 0
+    detect_obj_parameter['traffic_sign_h'] = 0
+    detect_obj_parameter['traffic_sign_t'] = 'None'
+    detect_obj_parameter['traffic_sign_acc'] = 0
 
 # gesture_obj_parameter
     detect_obj_parameter['gesture_x'] = 320
     detect_obj_parameter['gesture_y'] = 240
     detect_obj_parameter['gesture_w'] = 0
     detect_obj_parameter['gesture_h'] = 0
-    detect_obj_parameter['gesture_t'] = 'None'      # 手势文本  gesture_list = ["paper","scissor","rock"]
+    detect_obj_parameter['gesture_t'] = 'None'
     detect_obj_parameter['gesture_acc'] = 0
     # detect_obj_parameter['human_n'] = 0
 
@@ -653,7 +645,7 @@ class Vilib(object):
     @staticmethod
     def gesture_calibrate(img):
         if Vilib.detect_obj_parameter['calibrate_flag'] == True:
-            cv2.imwrite('/opt/vilib/cali.jpg', img[190:290,270:370])
+            cv2.imwrite('/opt/ezblock/cali.jpg', img[190:290,270:370])
             cv2.rectangle(img,(270,190),(370,290),(255,255,255),2)
 
         return img
@@ -1213,7 +1205,14 @@ class Vilib(object):
     @staticmethod
     def face_detect_func(img):
         if Vilib.detect_obj_parameter['fdf_flag'] == True:
-            img = Face.detect(img)
+            resize_img = cv2.resize(img, (320,240),interpolation=cv2.INTER_LINEAR)            
+            face_locations = face_recognition.face_locations(resize_img)
+            for (y,w,h,x) in face_locations:
+                x = x*2
+                y = y*2
+                w = w*2
+                h = h*2
+                cv2.rectangle(img,(x,y),(w,h),(0,255,0),2)
             return img
         else:
             return img
@@ -1222,7 +1221,7 @@ class Vilib(object):
     @staticmethod
     def face_recognition_func(img):
         if Vilib.detect_obj_parameter['frf_flag'] == True:
-            img = Face.recognition2img(img)
+            #img = Face.recognition2img(img)
             return img
         else:
             return img
@@ -1247,8 +1246,8 @@ class Vilib(object):
         # cv2.imwrite 对于没有的路径不会自动创建，原先没有该路径会写入失败,需要手动检测路径、创建路径
         while not os.path.exists(path):
             print('Path does not exist. Creating path now ... ')
-            os.system('sudo mkdir -p '+path)
-            os.system('sudo chmod -R 777 '+path)
+            os.system('sudo mkdir '+path)
+            os.system('sudo chmod 777 '+path)
             time.sleep(0.01) 
         #保存图片
         img =  Vilib.img_array[0]      
@@ -1329,7 +1328,7 @@ class Vilib(object):
     @staticmethod 
     def color_detect(color="red"):
         Vilib.detect_color_name(color)
-        #Vilib.color_detect_switch(True)
+        Vilib.color_detect_switch(True)
     
 # 5.人脸检测
     @staticmethod   
