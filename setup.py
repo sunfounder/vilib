@@ -112,17 +112,17 @@ if sys.argv[-1] == 'install':
     # install opencv
     # system('sudo pip3 install pillow')
     # system('sudo pip3 install numpy')  
-    # system('sudo apt install libjpeg-dev -y')
-    # system('sudo apt install libatlas-base-dev -y')
-    # system('sudo apt install libjpeg-dev -y')
-    # system('sudo apt install libtiff5-dev -y')
+    system('sudo apt install libjpeg-dev -y')
+    system('sudo apt install libatlas-base-dev -y')
+    system('sudo apt install libjpeg-dev -y')
+    system('sudo apt install libtiff5-dev -y')
     system('sudo apt-get install libhdf5-dev -y') 
     system('sudo apt-get install libhdf5-serial-dev -y') 
     system('sudo apt-get install libgtk-3-dev -y') 
     
-    # system('sudo apt install li.jpg12-dev -y')
-    # system('sudo apt install libqtgui4 libqt4-test -y')
-    # system('sudo apt install libjasper-dev -y')
+    system('sudo apt install li.jpg12-dev -y')
+    system('sudo apt install libqtgui4 libqt4-test -y')
+    system('sudo apt install libjasper-dev -y')
 
     system('sudo pip3 install opencv-contrib-python')
     # install tflite
