@@ -111,7 +111,7 @@ if sys.argv[-1] == 'install':
     system('sudo apt install cmake -y')
     # install opencv
     # system('sudo pip3 install pillow')
-    # system('sudo pip3 install numpy')  
+    system('sudo pip3 install -U numpy')  
     system('sudo apt install libjpeg-dev -y')
     system('sudo apt install libatlas-base-dev -y')
     system('sudo apt install libjpeg-dev -y')
