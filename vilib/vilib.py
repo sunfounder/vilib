@@ -1221,11 +1221,12 @@ class Vilib(object):
     def display():
         #显示窗口 加上销毁窗口会安全些
         #判断有没有桌面系统
-        if os.path.exists('/usr/share/xsessions/'):
+        if not "SSH_CONNECTION" in os.environ and os.path.exists('/usr/share/xsessions/'):
             Vilib.detect_obj_parameter['imshow_flag'] = True  
             print("imshow start ...")       
         else:
-            print("No desktop !")
+            Vilib.detect_obj_parameter['imshow_flag'] = False 
+            print("imshow close") 
         #开始flask 流传输
         Vilib.camera_flask()
 

@@ -59,7 +59,7 @@ class Face():
             os.system('sudo mkdir -p -m=777 '+model_path.rsplit('/',1)[0])
             os.system('sudo touch '+model_path)
             os.system('sudo chmod 777 '+model_path)
-            #注意加延时防止卡死
+            # 注意加延时防止卡死
             time.sleep(0.1)
 
         
