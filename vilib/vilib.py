@@ -191,27 +191,30 @@ class Vilib(object):
 
     video_flag = False
 
-# 读取人脸识别模型
+# set parameters
+
+    # 读取人脸识别模型
     face_cascade = cv2.CascadeClassifier('/opt/vilib/haarcascade_frontalface_default.xml') 
     kernel_5 = np.ones((5,5),np.uint8)#4x4的卷积核
 
     video_source = 0
 
-# 用于寻找手势识别的肤色的区域的模板图片，可以通过手势识别的校准功能更改图片
+    # 用于寻找手势识别的肤色的区域的模板图片，可以通过手势识别的校准功能更改图片
     roi = cv2.imread("/opt/vilib/cali.jpg")
     roi_hsv = cv2.cvtColor(roi, cv2.COLOR_BGR2HSV)
 
-# 创建共享字典，提供外部接口动态修改，以及返回字典内容
+    # 创建共享字典，提供外部接口动态修改，以及返回字典内容
     detect_obj_parameter = Manager().dict()
     img_array = Manager().list(range(2))
 
-# 默认的颜色识别颜色为红色
+    # 默认的颜色识别颜色为红色
     detect_obj_parameter['color_default'] = 'red'
 
-# 颜色的HSV空间中的 H 的范围
+    # 颜色的HSV空间中的 H 的范围
     color_dict = {'red':[0,4],'orange':[5,18],'yellow':[22,37],'green':[42,85],'blue':[92,110],'purple':[115,165],'red_2':[165,180]}
 
-# color_obj_parameter
+# detect_obj_parameter
+    # color_obj_parameter
     detect_obj_parameter['color_x'] = 320       # 最大色块中心坐标 x
     detect_obj_parameter['color_y'] = 240       # 最大色块中心坐标 x
     detect_obj_parameter['color_w'] = 0         # 最大色块 宽
@@ -220,15 +223,14 @@ class Vilib(object):
     detect_obj_parameter['lower_color'] = np.array([min(color_dict[detect_obj_parameter['color_default']]), 60, 60]) 
     detect_obj_parameter['upper_color'] = np.array([max(color_dict[detect_obj_parameter['color_default']]), 255, 255])
     
-
-# Human_obj_parameter
+    # Human_obj_parameter
     detect_obj_parameter['human_x'] = 320       # 最大人脸中心坐标 x
     detect_obj_parameter['human_y'] = 240       # 最大人脸中心坐标 x
     detect_obj_parameter['human_w'] = 0         # 最大人脸 宽
     detect_obj_parameter['human_h'] = 0         # 最大人脸 高
     detect_obj_parameter['human_n'] = 0         # 识别到的人脸个数
 
-# traffic_sign_obj_parameter
+    # traffic_sign_obj_parameter
     detect_obj_parameter['traffic_sign_x'] = 320        # 中心坐标 x
     detect_obj_parameter['traffic_sign_y'] = 240        # 中心坐标 x
     detect_obj_parameter['traffic_sign_w'] = 0          # 宽
@@ -236,17 +238,24 @@ class Vilib(object):
     detect_obj_parameter['traffic_sign_t'] = 'None'     # 标志文本 traffic_list = ['stop','right','left','forward'] 或 'none' 
     detect_obj_parameter['traffic_sign_acc'] = 0        
 
-# gesture_obj_parameter
+    # gesture_obj_parameter
     detect_obj_parameter['gesture_x'] = 320
     detect_obj_parameter['gesture_y'] = 240
     detect_obj_parameter['gesture_w'] = 0
     detect_obj_parameter['gesture_h'] = 0
     detect_obj_parameter['gesture_t'] = 'None'      # 手势文本  gesture_list = ["paper","scissor","rock"]
     detect_obj_parameter['gesture_acc'] = 0
-    # detect_obj_parameter['human_n'] = 0
+    detect_obj_parameter['human_n'] = 0
 
+    # object_detection_parameter
+    detect_obj_parameter['object_x'] = 320
+    detect_obj_parameter['object_y'] = 240
+    detect_obj_parameter['object_w'] = 0
+    detect_obj_parameter['object_h'] = 0
+    detect_obj_parameter['object_t'] = 'None'      # object label
+    detect_obj_parameter['object_n'] = 0
 
-# detect_switch
+    # detect_switch
     detect_obj_parameter['hdf_flag'] = False
     detect_obj_parameter['cdf_flag'] = False
     detect_obj_parameter['ts_flag'] = False
@@ -257,15 +266,16 @@ class Vilib(object):
     detect_obj_parameter['fdf_flag'] = False
     detect_obj_parameter['frf_flag'] = False
     detect_obj_parameter['imshow_flag'] = False
-# QR_code
+    detect_obj_parameter['odf_flag'] = False
+
+    # QR_code
     detect_obj_parameter['qr_data'] = "None"
     detect_obj_parameter['qr_x'] = 320
     detect_obj_parameter['qr_y'] = 240
     detect_obj_parameter['qr_w'] = 0
     detect_obj_parameter['qr_h'] = 0
 
-
-# picture
+    # picture
     detect_obj_parameter['picture_flag'] = False
     detect_obj_parameter['process_picture'] = True
     detect_obj_parameter['picture_path'] = '/home/pi/picture_file/' + datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')+ '.jpg'
@@ -275,11 +285,11 @@ class Vilib(object):
     detect_obj_parameter['ensure_flag'] = False
     detect_obj_parameter['clarity_val'] = 0
 
-# diy
+    # diy
     detect_obj_parameter['human_n'] = 0
     # detect_obj_parameter['hdf_flag'] = False
 
-# picture
+    # picture
     detect_obj_parameter['eff'] = 0
     detect_obj_parameter['setting'] = 0
     detect_obj_parameter['setting_flag'] = False
@@ -304,13 +314,12 @@ class Vilib(object):
 
     rt_img = np.ones((320,240),np.uint8)
     front_view_img = np.zeros((240,320,3), np.uint8)
-# 使用白色填充图片区域,默认为黑色
+    # 使用白色填充图片区域,默认为黑色
     # front_view_img.fill(255)       
     img_array[0] = rt_img
     img_array[1] = rt_img
     # img_array = rt_img
     vi_img = np.ones((320,240),np.uint8)  
-
 
 # 通过两个参数Shift_left，Shift_right修改
     @staticmethod
@@ -459,55 +468,38 @@ class Vilib(object):
         Vilib.detect_obj_parameter['upper_color'] = np.array([max(Vilib.color_dict[Vilib.detect_obj_parameter['color_default']]), 255, 255])
         Vilib.detect_obj_parameter['cdf_flag']  = True
 
-# # 开启摄像头网络传输，web_func参数可以控制是否开启网络传输，不开启网络传输也可以进行识别，两者是不同的线程
-#     @staticmethod
-#     def camera_start(web_func = True,inverted_flag = False):
-
-#         if inverted_flag == True:
-#             Vilib.detect_obj_parameter['camera_flip'] = True
-#         else:
-#             Vilib.detect_obj_parameter['camera_flip'] = False
-
-#         worker_2 = threading.Thread(target=Vilib.camera_clone, name="Thread1")
-#         if web_func == True: 
-#             worker_1 = threading.Thread(name='worker 1',target=web_camera_start)
-#             worker_1.start()
-#         worker_2.start()
-
-
-
-
-# 人脸检测开关    
+# function switch
+    # 人脸检测开关    
     @staticmethod
     def human_detect_switch(flag=False):
         Vilib.detect_obj_parameter['hdf_flag'] = flag
 
-# 颜色检测开关
+    # 颜色检测开关
     @staticmethod
     def color_detect_switch(flag=False):
         Vilib.detect_obj_parameter['cdf_flag']  = flag
 
-# 手势检测开关
+    # 手势检测开关
     @staticmethod
     def gesture_detect_switch(flag=False):
         Vilib.detect_obj_parameter['gs_flag']  = flag
 
-# 交通标志检测开关
+    # 交通标志检测开关
     @staticmethod
     def traffic_sign_detect_switch(flag=False):
         Vilib.detect_obj_parameter['ts_flag']  = flag
 
-# 手势检测开关
+    # 手势检测开关
     @staticmethod
     def gesture_calibrate_switch(flag=False):
         Vilib.detect_obj_parameter['calibrate_flag']  = flag
 
-# 目标检测开关
+    # 目标检测开关
     @staticmethod
     def object_follow_switch(flag=False):
         Vilib.detect_obj_parameter['object_follow_flag'] = flag
 
-# 二维码检测开关
+    # 二维码检测开关
     @staticmethod
     def qrcode_detect_switch(flag=False):
         Vilib.detect_obj_parameter['qr_flag']  = flag
@@ -552,8 +544,6 @@ class Vilib(object):
         # 
         try:
             while True:
-
-
                 for frame in camera.capture_continuous(rawCapture, format="bgr",use_video_port=True):# use_video_port=True
                     
                     start_time = time.time()
@@ -616,6 +606,12 @@ class Vilib(object):
                      
                     if  Vilib.detect_obj_parameter['imshow_flag'] == True:      
                         cv2.imshow("Picamera",img)
+
+                        if cv2.waitKey(1) & 0xFF == ord('q'):
+                            break
+                        if cv2.waitKey(1) & 0xff == 27: # press 'ESC' to quit
+                            break
+
                     
                     Vilib.img_array[0] = img
                     rawCapture.truncate(0)
@@ -657,7 +653,6 @@ class Vilib(object):
             cv2.rectangle(img,(270,190),(370,290),(255,255,255),2)
 
         return img
-
 
 # 添加水印的控制开关
     @staticmethod
@@ -1032,9 +1027,6 @@ class Vilib(object):
         else:
             return img
 
-
-
-
 # 颜色识别
 
     @staticmethod
@@ -1131,7 +1123,7 @@ class Vilib(object):
         else:
             return img
 
-# 
+# 颜色识别 2
     @staticmethod
     def new_color_detect_func(img,color):
         Vilib.detect_color_name(color)
@@ -1188,9 +1180,6 @@ class Vilib(object):
             return img
 
 
-
-#  新增 2021.07.30
-
 # 开启摄像头
     @staticmethod
     def camera_start(inverted_flag = False):
@@ -1232,9 +1221,9 @@ class Vilib(object):
     def display():
         #显示窗口 加上销毁窗口会安全些
         #判断有没有桌面系统
-        desktop_session = os.environ.get("DESKTOP_SESSION")
-        if desktop_session is not None:   
-            Vilib.detect_obj_parameter['imshow_flag'] = True
+        if os.path.exists('/usr/share/xsessions/'):
+            Vilib.detect_obj_parameter['imshow_flag'] = True  
+            print("imshow start ...")       
         else:
             print("No desktop !")
         #开始flask 流传输
@@ -1262,9 +1251,7 @@ class Vilib(object):
                 time.sleep(0.01)
         else:
             print('Photo save failed .. ')
-        
-         
-        
+                      
 # 3.录像
 
     rec_video_set = {}
@@ -1323,8 +1310,7 @@ class Vilib(object):
     def rec_video_stop():
         Vilib.rec_video_set["start_flag"] == False
         Vilib.rec_video_set["stop_flag"] = True
-           
-               
+                        
 # 4.颜色识别 
     @staticmethod 
     def color_detect(color="red"):
@@ -1344,7 +1330,6 @@ class Vilib(object):
         Vilib.detect_obj_parameter['frf_flag'] = flag
 
 
-
 # 二维码  # 
     @staticmethod
     def qr_coder_reader():
@@ -1352,8 +1337,15 @@ class Vilib(object):
         text = Vilib.detect_obj_parameter['qr_data']
         return text
  
-     
-            
+# 物体检测，使用 Tensorflow
+    @staticmethod
+    def object_detect_func(img):
+        if Vilib.detect_obj_parameter['odf_flag'] == True:
+            pass
+            return img
+        else:
+            return img
+               
 if __name__ == "__main__":
     
     pass
