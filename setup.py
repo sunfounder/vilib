@@ -139,7 +139,9 @@ if sys.argv[-1] == 'install':
     # install pyzbar
     system('sudo pip3 install pyzbar')
     
-    
+    # install mediapipe-rpi3 
+    system('sudo pip3 install mediapipe-rpi3')
+
     print("Create workspace")
     _, result = run_command("ls /opt")
     if "vilib" not in result:
