@@ -1,30 +1,28 @@
-from typing import Text
-from .face import Face
-import numpy as np
-import cv2
-import threading
-
-
-
-from importlib import import_module
 import os
-from flask import Flask, render_template, Response
-from multiprocessing import Process, Manager
 import time
-import tflite_runtime.interpreter as tflite
-from pyzbar import pyzbar
 import datetime
 
+import cv2
+import numpy as np
+from PIL import Image, ImageDraw, ImageFont
 from picamera.array import PiRGBArray
 from picamera import PiCamera
-from PIL import Image, ImageDraw, ImageFont
+
+import tflite_runtime.interpreter as tflite
+from pyzbar import pyzbar
+
 import threading
+from multiprocessing import Process, Manager
 
+from flask import Flask, render_template, Response
 
+from .face import Face
+from .image_classification import classify_image
+from .objects_detection import detect_objects
+from .gesture_detection import detect_gesture
+from .pose_detection import detect_pose
 
-import json
-
-
+# utils
 def run_command(cmd):
     import subprocess
     p = subprocess.Popen(
@@ -33,9 +31,9 @@ def run_command(cmd):
     status = p.poll()
     return status, result
 
+# region Main : parameter definition
 traffic_num_list = [i for i in range(4)]
 ges_num_list = [i for i in range(3)]
-
 
 traffic_list = ['stop','right','left','forward']
 gesture_list = ["paper","scissor","rock"]
@@ -44,11 +42,8 @@ gesture_list = ["paper","scissor","rock"]
 traffic_dict = dict(zip(traffic_num_list,traffic_list))   # 构建模型返回数字对应的类型的字典
 ges_dict = dict(zip(ges_num_list,gesture_list))
 
-
-
 traffic_sign_model_path = "/opt/vilib/tf_150_dr0.2.tflite"    # 模型路径
 gesture_model_path = "/opt/vilib/3bak_ges_200_dr0.2.tflite"
-
 
 interpreter_1 = tflite.Interpreter(model_path=traffic_sign_model_path)    # tflite读取模型
 interpreter_1.allocate_tensors()
@@ -62,14 +57,15 @@ input_details_1 = interpreter_1.get_input_details()
 output_details_1 = interpreter_1.get_output_details()
 # print(str(output_details_1))
 
-
 # Get input and output tensors.
 input_details_2 = interpreter_2.get_input_details()
 # print(str(input_details_2))
 output_details_2 = interpreter_2.get_output_details()
 # print(str(output_details_2))
 
+# endregion : parameter definition
 
+# region Main : flask
 app = Flask(__name__)
 @app.route('/')
 def index():
@@ -95,6 +91,7 @@ def gen():
                b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
         time.sleep(0.03)
 
+        
 @app.route('/mjpg')   ## video
 def video_feed():
     # from camera import Camera
@@ -121,9 +118,10 @@ def video_feed_png():
     return response
 
 
-
 def web_camera_start():
     app.run(host='0.0.0.0', port=9000,threaded=True)
+
+# endregion : flask
 
 # 滤镜
 EFFECTS = [   
@@ -267,6 +265,9 @@ class Vilib(object):
     detect_obj_parameter['frf_flag'] = False
     detect_obj_parameter['imshow_flag'] = False
     detect_obj_parameter['odf_flag'] = False
+    detect_obj_parameter['icf_flag'] = False
+    detect_obj_parameter['gdf_flag'] = False
+    detect_obj_parameter['pdf_flag'] = False
 
     # QR_code
     detect_obj_parameter['qr_data'] = "None"
@@ -557,7 +558,11 @@ class Vilib(object):
                     img = Vilib.qrcode_detect_func(img)
                     img = Vilib.face_detect_func(img)
                     img = Vilib.face_recognition_func(img)
-                    
+                    img = Vilib.object_detect_fuc(img) 
+                    img = Vilib.image_classify_fuc(img)
+                    img = Vilib.gesture_detect_fuc(img)
+                    img = Vilib.pose_detect_fuc(img)
+
                     # change_camera_setting
                     if Vilib.detect_obj_parameter['change_setting_flag'] == True:
                         Vilib.detect_obj_parameter['change_setting_flag'] = False
@@ -1218,17 +1223,19 @@ class Vilib(object):
 
 # 1. 显示在树莓派桌面，在浏览器输入蜘蛛的IP地址可以看到画面
     @staticmethod
-    def display():
+    def display(local=True,web=True):
         #显示窗口 加上销毁窗口会安全些
         #判断有没有桌面系统
-        if not "SSH_CONNECTION" in os.environ and os.path.exists('/usr/share/xsessions/'):
-            Vilib.detect_obj_parameter['imshow_flag'] = True  
-            print("imshow start ...")       
-        else:
-            Vilib.detect_obj_parameter['imshow_flag'] = False 
-            print("imshow close") 
+        if local == True:
+            if not "SSH_CONNECTION" in os.environ and os.path.exists('/usr/share/xsessions/'):
+                Vilib.detect_obj_parameter['imshow_flag'] = True  
+                print("imshow start ...")       
+            else:
+                Vilib.detect_obj_parameter['imshow_flag'] = False 
+                print("imshow close") 
         #开始flask 流传输
-        Vilib.camera_flask()
+        if web == True:
+            Vilib.camera_flask()
 
 
 # 2. 拍照保存
@@ -1337,16 +1344,51 @@ class Vilib(object):
         #Vilib.qrcode_detect_switch(True)
         text = Vilib.detect_obj_parameter['qr_data']
         return text
- 
-# 物体检测，使用 Tensorflow
+
+# object detection
     @staticmethod
-    def object_detect_func(img):
+    def object_detect_switch(flag=False):
+        Vilib.detect_obj_parameter['odf_flag'] = flag
+
+    @staticmethod
+    def object_detect_fuc(img):
         if Vilib.detect_obj_parameter['odf_flag'] == True:
-            pass
-            return img
-        else:
-            return img
-               
+            img = detect_objects(image=img)   
+        return img   
+      
+# image classification
+    @staticmethod
+    def image_classify_switch(flag=False):
+        Vilib.detect_obj_parameter['icf_flag'] = flag
+
+    @staticmethod
+    def image_classify_fuc(img):
+        if Vilib.detect_obj_parameter['icf_flag'] == True:
+            img = classify_image(image=img)   
+        return img   
+
+# gesture detection
+    @staticmethod
+    def gesture_detect_switch(flag=False):
+        Vilib.detect_obj_parameter['gdf_flag'] = flag
+
+    @staticmethod
+    def gesture_detect_fuc(img):
+        if Vilib.detect_obj_parameter['gdf_flag'] == True:
+            img = detect_gesture(image=img)   
+        return img   
+
+# pose detection
+    @staticmethod
+    def pose_detect_switch(flag=False):
+        Vilib.detect_obj_parameter['pdf_flag'] = flag
+
+    @staticmethod
+    def pose_detect_fuc(img):
+        if Vilib.detect_obj_parameter['pdf_flag'] == True:
+            img = detect_pose(image=img)   
+        return img
+
 if __name__ == "__main__":
     
     pass
