@@ -63,6 +63,12 @@ input_details_2 = interpreter_2.get_input_details()
 output_details_2 = interpreter_2.get_output_details()
 # print(str(output_details_2))
 
+image_classification_model = '/opt/vilib/mobilenet_v1_0.25_224_quant.tflite'
+image_classification_labels = '/opt/vilib/labels_mobilenet_quant_v1_224.txt'
+
+objects_detection_model = '/opt/vilib/detect.tflite'
+objects_detection_labels = '/opt/vilib/coco_labels.txt'
+
 # endregion : parameter definition
 
 # region Main : flask
@@ -1345,15 +1351,23 @@ class Vilib(object):
         text = Vilib.detect_obj_parameter['qr_data']
         return text
 
-# object detection
+# objects detection
     @staticmethod
     def object_detect_switch(flag=False):
         Vilib.detect_obj_parameter['odf_flag'] = flag
 
     @staticmethod
+    def object_detect_set_model(path):
+        objects_detection_model = path
+
+    @staticmethod
+    def object_detect_set_labels(path):
+        objects_detection_labels = path
+
+    @staticmethod
     def object_detect_fuc(img):
         if Vilib.detect_obj_parameter['odf_flag'] == True:
-            img = detect_objects(image=img)   
+            img = detect_objects(image=img,model=objects_detection_model,labels=objects_detection_labels)   
         return img   
       
 # image classification
@@ -1362,9 +1376,17 @@ class Vilib(object):
         Vilib.detect_obj_parameter['icf_flag'] = flag
 
     @staticmethod
+    def image_classify_set_model(path):
+        image_classification_model = path
+
+    @staticmethod
+    def image_classify_set_labels(path):
+        image_classification_labels = path
+
+    @staticmethod
     def image_classify_fuc(img):
         if Vilib.detect_obj_parameter['icf_flag'] == True:
-            img = classify_image(image=img)   
+            img = classify_image(image=img,model=image_classification_model,labels=image_classification_labels)   
         return img   
 
 # gesture detection
