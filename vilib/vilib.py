@@ -1307,7 +1307,7 @@ class Vilib(object):
                 break
 
     @staticmethod
-    def rec_video_run(video_name):
+    def rec_video_run():
         rec_thread = threading.Thread(target=Vilib.rec_video_work,name = 'rec_video')
         rec_thread.start()
         Vilib.rec_video_set["start_flag"] = True
