@@ -269,6 +269,7 @@ class Vilib(object):
     detect_obj_parameter['qr_flag'] = False
     detect_obj_parameter['fdf_flag'] = False
     detect_obj_parameter['frf_flag'] = False
+    detect_obj_parameter['camera_start_flag'] = False
     detect_obj_parameter['imshow_flag'] = False
     detect_obj_parameter['odf_flag'] = False
     detect_obj_parameter['icf_flag'] = False
@@ -622,13 +623,17 @@ class Vilib(object):
                             break
                         if cv2.waitKey(1) & 0xff == 27: # press 'ESC' to quit
                             break
-
+                    
+                    if Vilib.detect_obj_parameter['camera_start_flag'] == False:
+                        break
                     
                     Vilib.img_array[0] = img
                     rawCapture.truncate(0)
                     end_time = time.time()
                     end_time = end_time - start_time
 
+                if Vilib.detect_obj_parameter['camera_start_flag'] == False:
+                    break
 
                 picture_time = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
                 Vilib.detect_obj_parameter['picture_path'] = '/home/pi/picture_file/' + picture_time + '.jpg'
@@ -653,6 +658,7 @@ class Vilib(object):
                 Vilib.detect_obj_parameter['photo_button_flag'] = False
                    
         finally:
+            print('camera close')
             camera.close()
             cv2.destroyAllWindows()
 
@@ -1200,9 +1206,14 @@ class Vilib(object):
         else:
             Vilib.detect_obj_parameter['camera_flip'] = False       
 
+        Vilib.detect_obj_parameter['camera_start_flag'] = True
         worker = threading.Thread(target=Vilib.camera_clone, name="camera_satrt")
         worker.start()
 
+    @staticmethod
+    def camera_close():
+        Vilib.detect_obj_parameter['camera_start_flag'] = False
+        
 # 开启摄像头网络传输
     @staticmethod
     def camera_flask():
@@ -1249,7 +1260,7 @@ class Vilib(object):
     def take_photo(photo_name,path='/home/pi/picture'):
         # cv2.imwrite 对于没有的路径不会自动创建，原先没有该路径会写入失败,需要手动检测路径、创建路径
         while not os.path.exists(path):
-            print('Path does not exist. Creating path now ... ')
+            # print('Path does not exist. Creating path now ... ')
             os.system('sudo mkdir -p '+path)
             os.system('sudo chmod -R 777 '+path)
             time.sleep(0.01) 
@@ -1259,7 +1270,7 @@ class Vilib(object):
             if img is  not None:
                 cv2.imwrite(path + '/' + photo_name +'.jpg',img )
                 Vilib.detect_obj_parameter['picture_flag'] = False
-                print('The photo is saved as '+path+'/'+photo_name+'.jpg')
+                # print('The photo is saved as '+path+'/'+photo_name+'.jpg')
                 break
             else:
                 time.sleep(0.01)
