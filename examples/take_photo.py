@@ -2,7 +2,7 @@ from time import sleep
 from vilib import Vilib
 
 def main():
-    Vilib.camera_start()
+    Vilib.camera_start(vflip=False,hflip=False)
     Vilib.display()
 
     i = 0

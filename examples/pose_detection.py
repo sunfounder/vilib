@@ -4,7 +4,7 @@ from vilib import Vilib
 
 def main():
     
-    Vilib.camera_start(inverted_flag=True)
+    Vilib.camera_start(vflip=True,hflip=False)
     Vilib.display(local=True,web=True)
     Vilib.pose_detect_switch(True)
 

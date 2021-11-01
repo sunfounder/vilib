@@ -535,8 +535,8 @@ class Vilib(object):
         camera.exposure_mode = 'auto'
         camera.meter_mode = 'average'
         camera.awb_mode = 'auto'
-        camera.hflip = False
-        camera.vflip = Vilib.detect_obj_parameter['camera_flip']
+        camera.hflip = Vilib.detect_obj_parameter['camera_hflip']
+        camera.vflip = Vilib.detect_obj_parameter['camera_vflip']
         camera.crop = (0.0, 0.0, 1.0, 1.0)
         rawCapture = PiRGBArray(camera, size=camera.resolution)  
         last_e ='none'
@@ -651,7 +651,8 @@ class Vilib(object):
 
                 camera = PiCamera()
                 camera.resolution = (640,480)
-                camera.vflip = Vilib.detect_obj_parameter['camera_flip']
+                camera.hflip = Vilib.detect_obj_parameter['camera_hflip']
+                camera.vflip = Vilib.detect_obj_parameter['camera_vflip']
                 # camera.rotation = Vilib.detect_obj_parameter['camera_rot']
                 camera.image_effect = e
                 rawCapture = PiRGBArray(camera, size=camera.resolution) 
@@ -1199,13 +1200,10 @@ class Vilib(object):
 
 # 开启摄像头
     @staticmethod
-    def camera_start(inverted_flag = False):
+    def camera_start(vflip=False, hflip=False):
 
-        if inverted_flag == True:
-            Vilib.detect_obj_parameter['camera_flip'] = True
-        else:
-            Vilib.detect_obj_parameter['camera_flip'] = False       
-
+        Vilib.detect_obj_parameter['camera_vflip'] = vflip
+        Vilib.detect_obj_parameter['camera_hflip'] = hflip       
         Vilib.detect_obj_parameter['camera_start_flag'] = True
         worker = threading.Thread(target=Vilib.camera_clone, name="camera_satrt")
         worker.start()
