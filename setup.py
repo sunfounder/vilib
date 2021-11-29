@@ -124,7 +124,7 @@ if sys.argv[-1] == 'install':
     system('sudo apt install libqtgui4 libqt4-test -y')
     system('sudo apt install libjasper-dev -y')
 
-    system('sudo pip3 install opencv-contrib-python')
+    system('sudo pip3 install opencv-contrib-python==4.5.3.56 ')
     # install tflite
     # system('sudo pip3 install https://dl.google.com/coral/python/tflite_runtime-2.1.0.post1-cp37-cp37m-linux_armv7l.whl')
     system('sudo pip3 install ./tflite_runtime-2.1.0.post1-cp37-cp37m-linux_armv7l.whl')
