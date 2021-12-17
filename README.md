@@ -61,4 +61,4 @@ E-mail:
     service@sunfounder.com
 
 
-[CHANGELOG]:https://github.com/sunfounder/vilib/blob/0.0.1/CHANGELOG.md
+[CHANGELOG]:https://github.com/sunfounder/vilib/blob/master/CHANGELOG.md
