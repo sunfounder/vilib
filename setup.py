@@ -61,13 +61,13 @@ setup(
 
     # You can just specify the packages manually here if your project is
     # simple. Or you can use find_packages().
-    packages=find_packages(exclude=[ 'doc', 'tests*' ,'examples']),
+    packages=find_packages(exclude=[ 'doc', 'tests*' ,'examples','workspace']),
 
     # List run-time dependencies here.  These will be installed by pip when
     # your project is installed. For an analysis of "install_requires" vs pip's
     # requirements files see:
     # https://packaging.python.org/en/latest/requirements.html
-    install_requires=['picamera','imutils'],
+    install_requires=[],
  
     # To provide executable scripts, use entry points in preference to the
     # "scripts" keyword. Entry points provide cross-platform support and allow
@@ -80,78 +80,4 @@ setup(
 )
 
 
-errors = []
-
-def do(msg="", cmd=""):
-    print(" - %s..." % (msg), end='\r')
-    print(" - %s... " % (msg), end='')
-    status, result = eval(cmd)
-    # print(status, result)
-    if status == 0 or status == None or result == "":
-        print('Done')
-    else:
-        print('Error')
-        errors.append("%s error:\n  Status:%s\n  Error:%s" %
-                      (msg, status, result))
-
-def run_command(cmd=""):
-    import subprocess
-    p = subprocess.Popen(
-        cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-    result = p.stdout.read().decode('utf-8')
-    status = p.poll()
-    # print(result)
-    # print(status)
-    return status, result
-
-if sys.argv[-1] == 'install':
-
-    system('sudo apt update')
-    # install cmake
-    system('sudo apt install cmake -y')
-    # install opencv
-    # system('sudo pip3 install pillow')
-    system('sudo pip3 install -U numpy')  
-    system('sudo apt install libjpeg-dev -y')
-    system('sudo apt install libatlas-base-dev -y')
-    system('sudo apt install libjpeg-dev -y')
-    system('sudo apt install libtiff5-dev -y')
-    system('sudo apt-get install libhdf5-dev -y') 
-    system('sudo apt-get install libhdf5-serial-dev -y') 
-    system('sudo apt-get install libgtk-3-dev -y') 
-    
-    system('sudo apt install li.jpg12-dev -y')
-    system('sudo apt install libqtgui4 libqt4-test -y')
-    system('sudo apt install libjasper-dev -y')
-
-    system('sudo pip3 install opencv-contrib-python==4.5.3.56 ')
-    # install tflite
-    # system('sudo pip3 install https://dl.google.com/coral/python/tflite_runtime-2.1.0.post1-cp37-cp37m-linux_armv7l.whl')
-    system('sudo pip3 install ./tflite_runtime-2.1.0.post1-cp37-cp37m-linux_armv7l.whl')
-    # install face_recognition
-    system('sudo apt install build-essential cmake libboost-all-dev -y')
-    system('sudo pip3 install dlib')
-    system('sudo pip3 install face_recognition')
-    # install Flask
-    system('sudo pip3 install Flask')
-    # install picamera
-    system('sudo pip3 install picamera')
-    # install pyzbar
-    system('sudo pip3 install pyzbar')
-    
-    # install mediapipe-rpi3 
-    system('sudo pip3 install mediapipe-rpi3')
-
-    print("Create workspace")
-    _, result = run_command("ls /opt")
-    if "vilib" not in result:
-        do(msg="create dir",
-            cmd='run_command("mkdir /opt/vilib")')
-    do(msg="copy workspace",
-        cmd='run_command("sudo cp -r ./workspace/* /opt/vilib/")')
-
-    # do(msg="add write permission to log file",
-    #     cmd='run_command("sudo chmod 666 /opt/vilib/log")')
-    
-    
     
