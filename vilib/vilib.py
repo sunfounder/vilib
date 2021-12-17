@@ -2,6 +2,7 @@ import os
 import time
 import datetime
 
+print('Launching ...')
 import cv2
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
@@ -16,11 +17,10 @@ from multiprocessing import Process, Manager
 
 from flask import Flask, render_template, Response
 
-from .face import Face
 from .image_classification import classify_image
 from .objects_detection import detect_objects
-from .gesture_detection import detect_gesture
-from .pose_detection import detect_pose
+from .hands_detection import DetectHands
+from .pose_detection import DetectPose
 
 # utils
 def run_command(cmd):
@@ -30,6 +30,15 @@ def run_command(cmd):
     result = p.stdout.read().decode('utf-8')
     status = p.poll()
     return status, result
+
+def findContours(img):
+    _tuple = cv2.findContours(img,cv2.RETR_EXTERNAL,cv2.CHAIN_APPROX_SIMPLE)      
+    # compatible with opencv3.x and openc4.x
+    if len(_tuple) == 3:
+        _, contours, hierarchy = _tuple
+    else:
+        contours, hierarchy = _tuple
+    return contours, hierarchy
 
 # region Main : parameter definition
 traffic_num_list = [i for i in range(4)]
@@ -191,6 +200,9 @@ def add_text_to_image(name, text_1):
     image_target.save(name,quality=95,subsampling=0)# 
 
 
+# utils
+
+
 class Vilib(object): 
 
     video_flag = False
@@ -249,7 +261,6 @@ class Vilib(object):
     detect_obj_parameter['gesture_h'] = 0
     detect_obj_parameter['gesture_t'] = 'None'      # 手势文本  gesture_list = ["paper","scissor","rock"]
     detect_obj_parameter['gesture_acc'] = 0
-    detect_obj_parameter['human_n'] = 0
 
     # object_detection_parameter
     detect_obj_parameter['object_x'] = 320
@@ -267,8 +278,6 @@ class Vilib(object):
     detect_obj_parameter['calibrate_flag'] = False   
     detect_obj_parameter['object_follow_flag'] = False
     detect_obj_parameter['qr_flag'] = False
-    detect_obj_parameter['fdf_flag'] = False
-    detect_obj_parameter['frf_flag'] = False
     detect_obj_parameter['camera_start_flag'] = False
     detect_obj_parameter['imshow_flag'] = False
     detect_obj_parameter['odf_flag'] = False
@@ -283,6 +292,11 @@ class Vilib(object):
     detect_obj_parameter['qr_w'] = 0
     detect_obj_parameter['qr_h'] = 0
 
+    # hands 
+    detect_obj_parameter['hands_joints'] = None
+    # pose
+    detect_obj_parameter['body_joints'] = None
+
     # picture
     detect_obj_parameter['picture_flag'] = False
     detect_obj_parameter['process_picture'] = True
@@ -292,10 +306,6 @@ class Vilib(object):
 
     detect_obj_parameter['ensure_flag'] = False
     detect_obj_parameter['clarity_val'] = 0
-
-    # diy
-    detect_obj_parameter['human_n'] = 0
-    # detect_obj_parameter['hdf_flag'] = False
 
     # picture
     detect_obj_parameter['eff'] = 0
@@ -563,11 +573,11 @@ class Vilib(object):
                     img = Vilib.human_detect_func(img)
                     img = Vilib.gesture_recognition(img)
                     img = Vilib.qrcode_detect_func(img)
-                    img = Vilib.face_detect_func(img)
-                    img = Vilib.face_recognition_func(img)
+                    # img = Vilib.face_detect_func(img)
+                    # img = Vilib.face_recognition_func(img)
                     img = Vilib.object_detect_fuc(img) 
                     img = Vilib.image_classify_fuc(img)
-                    img = Vilib.gesture_detect_fuc(img)
+                    img = Vilib.hands_detect_fuc(img)
                     img = Vilib.pose_detect_fuc(img)
 
                     # change_camera_setting
@@ -794,8 +804,8 @@ class Vilib(object):
 
             open_img = cv2.morphologyEx(mask_all, cv2.MORPH_OPEN,Vilib.kernel_5,iterations=1)              #开运算 
 
-            contours, hierarchy = cv2.findContours(open_img,cv2.RETR_EXTERNAL,cv2.CHAIN_APPROX_SIMPLE)          ####在binary中发现轮廓，轮廓按照面积从小到大排列
-                # p=0
+            contours, hierarchy = findContours(open_img)
+
             contours = sorted(contours,key = Vilib.cnt_area, reverse=False)
             traffic_n = len(contours)
             max_area = 0
@@ -852,7 +862,7 @@ class Vilib(object):
                                 open_img = cv2.morphologyEx(red_mask_all, cv2.MORPH_OPEN,Vilib.kernel_5,iterations=1)              #开运算  
                                 open_img = cv2.dilate(open_img, Vilib.kernel_5,iterations=5) 
 
-                                blue_contours, hierarchy = cv2.findContours(open_img,cv2.RETR_EXTERNAL,cv2.CHAIN_APPROX_SIMPLE)          ####在binary中发现轮廓，轮廓按照面积从小到大排列
+                                blue_contours, hierarchy = findContours(open_img)      
                                 
                                 contours_count = len(blue_contours)
                                 if contours_count >=1:
@@ -944,10 +954,9 @@ class Vilib(object):
 
             # open_img = cv2.morphologyEx(cr_skin, cv2.MORPH_OPEN,Vilib.kernel_5,iterations=1)
 
-            contours, hierarchy = cv2.findContours(dilate,cv2.RETR_EXTERNAL,cv2.CHAIN_APPROX_SIMPLE)
+            contours, hierarchy = findContours(dilate)      
+
             ges_num = len(contours)
-
-
             if ges_num > 0:
                 contours = sorted(contours,key = Vilib.cnt_area, reverse=True)
                 # for i in range(0,len(contours)):    #遍历所有的轮廓
@@ -957,10 +966,8 @@ class Vilib(object):
             # print(len(faces))
                 face_len = len(faces)
                     
-
-                        #在图像上画上矩形（图片、左上角坐标、右下角坐标、颜色、线条宽度）
-
-                    
+                #在图像上画上矩形（图片、左上角坐标、右下角坐标、颜色、线条宽度）
+         
                 if w >= 60 and h >= 60 and face_len == 0:
                     # acc_val,ges_type = Vilib.gesture_predict(img,x-2.2*w,y-2.8*h,4.4*w,5.6*h) 
                     acc_val,ges_type = Vilib.gesture_predict(img,x-0.1*w,y-0.2*h,1.1*w,1.2*h) 
@@ -1054,7 +1061,6 @@ class Vilib(object):
         if Vilib.detect_obj_parameter['cdf_flag']  == True:
             resize_img = cv2.resize(img, (160,120), interpolation=cv2.INTER_LINEAR)
             hsv = cv2.cvtColor(resize_img, cv2.COLOR_BGR2HSV)              # 2.从BGR转换到HSV
-            # print(Vilib.lower_color)
             color_type = Vilib.detect_obj_parameter['color_default']
             
             mask = cv2.inRange(hsv,np.array([min(Vilib.color_dict[color_type]), 60, 60]), np.array([max(Vilib.color_dict[color_type]), 255, 255]) )           # 3.inRange()：介于lower/upper之间的为白色，其余黑色
@@ -1064,8 +1070,9 @@ class Vilib(object):
 
             open_img = cv2.morphologyEx(mask, cv2.MORPH_OPEN,Vilib.kernel_5,iterations=1)              #开运算  
 
-            contours, hierarchy = cv2.findContours(open_img,cv2.RETR_EXTERNAL,cv2.CHAIN_APPROX_SIMPLE)          ####在binary中发现轮廓，轮廓按照面积从小到大排列
-                # p=0
+            ####在binary中发现轮廓，轮廓按照面积从小到大排列
+            contours, hierarchy = findContours(open_img)      
+
             Vilib.detect_obj_parameter['color_n'] = len(contours)
             max_area = 0
 
@@ -1160,8 +1167,9 @@ class Vilib(object):
 
             open_img = cv2.morphologyEx(mask, cv2.MORPH_OPEN,Vilib.kernel_5,iterations=1)              #开运算  
 
-            contours, hierarchy = cv2.findContours(open_img,cv2.RETR_EXTERNAL,cv2.CHAIN_APPROX_SIMPLE)          ####在binary中发现轮廓，轮廓按照面积从小到大排列
-                # p=0
+            ####在binary中发现轮廓，轮廓按照面积从小到大排列
+            contours, hierarchy = cv2.findContours(open_img)      
+
             Vilib.detect_obj_parameter['color_n'] = len(contours)
             max_area = 0
 
@@ -1215,26 +1223,9 @@ class Vilib(object):
 # 开启摄像头网络传输
     @staticmethod
     def camera_flask():
+        print('Starting network video streaming ...')
         worker = threading.Thread(name='worker 1',target=web_camera_start)
         worker.start()
-
-# 人脸检测（使用face_detection库）
-    @staticmethod
-    def face_detect_func(img):
-        if Vilib.detect_obj_parameter['fdf_flag'] == True:
-            img = Face.detect(img)
-            return img
-        else:
-            return img
-
-# 人脸识别（使用face_detection库）
-    @staticmethod
-    def face_recognition_func(img):
-        if Vilib.detect_obj_parameter['frf_flag'] == True:
-            img = Face.recognition2img(img)
-            return img
-        else:
-            return img
 
 # 1. 显示在树莓派桌面，在浏览器输入蜘蛛的IP地址可以看到画面
     @staticmethod
@@ -1247,7 +1238,7 @@ class Vilib(object):
                 print("imshow start ...")       
             else:
                 Vilib.detect_obj_parameter['imshow_flag'] = False 
-                print("imshow close") 
+                print("local display failed, because there is no gui.") 
         #开始flask 流传输
         if web == True:
             Vilib.camera_flask()
@@ -1317,10 +1308,11 @@ class Vilib(object):
 
     @staticmethod
     def rec_video_run():
-        rec_thread = threading.Thread(target=Vilib.rec_video_work,name = 'rec_video')
+        rec_thread = threading.Thread(name = 'rec_video', target=Vilib.rec_video_work)
         rec_thread.start()
         Vilib.rec_video_set["start_flag"] = True
         print("run...")
+
     @staticmethod
     def rec_video_start():
         Vilib.rec_video_set["start_flag"] = True 
@@ -1343,14 +1335,7 @@ class Vilib(object):
 # 5.人脸检测
     @staticmethod   
     def face_detect_switch(flag=False):
-        # Vilib.human_detect_switch(True)
-        Vilib.detect_obj_parameter['fdf_flag'] = flag
-        
-
-# 6.人脸识别
-    @staticmethod
-    def face_recognition_switch(flag=False):
-        Vilib.detect_obj_parameter['frf_flag'] = flag
+        Vilib.human_detect_switch(True)
 
 
 # 二维码  # 
@@ -1367,10 +1352,16 @@ class Vilib(object):
 
     @staticmethod
     def object_detect_set_model(path):
+        global objects_detection_model
+        if not os.path.exists(path):
+            raise ValueError('incorrect model path ')    
         objects_detection_model = path
 
     @staticmethod
     def object_detect_set_labels(path):
+        global objects_detection_labels
+        if not os.path.exists(path):
+            raise ValueError('incorrect labels path ')    
         objects_detection_labels = path
 
     @staticmethod
@@ -1386,10 +1377,16 @@ class Vilib(object):
 
     @staticmethod
     def image_classify_set_model(path):
+        global image_classification_model
+        if not os.path.exists(path):
+            raise ValueError('incorrect model path ')          
         image_classification_model = path
 
     @staticmethod
     def image_classify_set_labels(path):
+        global image_classification_labels
+        if not os.path.exists(path):
+            raise ValueError('incorrect labels path ')  
         image_classification_labels = path
 
     @staticmethod
@@ -1400,24 +1397,26 @@ class Vilib(object):
 
 # gesture detection
     @staticmethod
-    def gesture_detect_switch(flag=False):
+    def hands_detect_switch(flag=False):
+        Vilib.detect_hands = DetectHands()
         Vilib.detect_obj_parameter['gdf_flag'] = flag
 
     @staticmethod
-    def gesture_detect_fuc(img):
+    def hands_detect_fuc(img):
         if Vilib.detect_obj_parameter['gdf_flag'] == True:
-            img = detect_gesture(image=img)   
+            img,Vilib.detect_obj_parameter['hands_joints'] =  Vilib.detect_hands.work(image=img)   
         return img   
 
 # pose detection
     @staticmethod
     def pose_detect_switch(flag=False):
+        Vilib.pose_detect = DetectPose()
         Vilib.detect_obj_parameter['pdf_flag'] = flag
 
     @staticmethod
     def pose_detect_fuc(img):
         if Vilib.detect_obj_parameter['pdf_flag'] == True:
-            img = detect_pose(image=img)   
+            img,Vilib.detect_obj_parameter['body_joints'] = Vilib.pose_detect.work(image=img)   
         return img
 
 if __name__ == "__main__":

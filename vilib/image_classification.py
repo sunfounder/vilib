@@ -4,6 +4,7 @@ from __future__ import print_function
 
 import argparse
 import time
+import os
 import numpy as np
 
 import cv2
@@ -155,8 +156,15 @@ def main():
 
     time.sleep(0.01)
 
+
 def classify_image(image, model=model_path,labels=labels_path):
   # loading model and corresponding label
+  if not os.path.exists(model):
+    print('incorrect model path ')
+    return image
+  if not os.path.exists(labels):
+    print('incorrect labels path ')
+    return image
   labels = load_labels(labels)
   interpreter = Interpreter(model)
   interpreter.allocate_tensors()

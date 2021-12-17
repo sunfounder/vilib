@@ -1,31 +1,28 @@
 from vilib import Vilib
-from picrawler import Picrawler
 from time import sleep
 
 def main():
 
-
-    crawler = Picrawler([10,11,12,4,5,6,1,2,3,7,8,9]) 
-
-    Vilib.camera_start()
-    Vilib.display()
+    Vilib.camera_start(vflip=False,hflip=False)
+    Vilib.display(local=True,web=True)
     Vilib.color_detect("red")
-
-    # Vilib.detect_obj_parameter['color_x'] = int(x + w/2)   # 色块中心坐标 x
-    # Vilib.detect_obj_parameter['color_y'] = int(y + h/2)   # 中心坐标 y
-    # Vilib.detect_obj_parameter['color_w'] = w              # 宽
-    # Vilib.detect_obj_parameter['color_h'] = h              # 高
-    # Vilib.detect_obj_parameter['color_n'] = 0              # 色块个数
+    sleep(1)
+    # Vilib.detect_obj_parameter['color_x']    # Maximum color block center coordinate x
+    # Vilib.detect_obj_parameter['color_y']    # Maximum color block center coordinate x
+    # Vilib.detect_obj_parameter['color_w']    # Maximum color block pixel width
+    # Vilib.detect_obj_parameter['color_h']    # Maximum color block pixel height
+    # Vilib.detect_obj_parameter['color_n']    # Number of color blocks found
 
     while True:
-        if Vilib.detect_obj_parameter['color_n'] != 0:
+        n = Vilib.detect_obj_parameter['color_n'] 
+        print("%s color blocks are found"%n,end=',')
+        if n != 0:   
             w = Vilib.detect_obj_parameter['color_w']
             h = Vilib.detect_obj_parameter['color_h']
-            
-            if w*h > 100*100: 
-                crawler.do_action('backward',2,speed=100) 
-
-        sleep(0.2)
+            print("the maximum color block pixel size is %s*%s"%(w,h))
+        else:
+            print('\n')
+        sleep(0.5)
 
 
 

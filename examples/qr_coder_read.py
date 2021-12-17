@@ -4,9 +4,8 @@ from time import sleep
 
 
 def main():
-    Vilib.camera_start()
-    Vilib.display()
-
+    Vilib.camera_start(vflip=False,hflip=False)
+    Vilib.display(local=True,web=True)
     Vilib.qrcode_detect_switch(True)
     
     while True:
