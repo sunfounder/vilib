@@ -18,6 +18,7 @@
 ### Optimized
 - Optimize code redundancy
 - Organize and optimize the installation script
+- Dynamic import, speed up startup
 
 ## [0.0.1] - 2021-11-29 
 - Complete the construction and testing of basic functions

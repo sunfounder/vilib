@@ -17,10 +17,6 @@ from multiprocessing import Process, Manager
 
 from flask import Flask, render_template, Response
 
-from .image_classification import classify_image
-from .objects_detection import detect_objects
-from .hands_detection import DetectHands
-from .pose_detection import DetectPose
 
 # utils
 def run_command(cmd):
@@ -1367,6 +1363,8 @@ class Vilib(object):
     @staticmethod
     def object_detect_fuc(img):
         if Vilib.detect_obj_parameter['odf_flag'] == True:
+            # print('detect_objects starting')
+            from .objects_detection import detect_objects
             img = detect_objects(image=img,model=objects_detection_model,labels=objects_detection_labels)   
         return img   
       
@@ -1392,12 +1390,15 @@ class Vilib(object):
     @staticmethod
     def image_classify_fuc(img):
         if Vilib.detect_obj_parameter['icf_flag'] == True:
+            # print('classify_image starting')
+            from .image_classification import classify_image
             img = classify_image(image=img,model=image_classification_model,labels=image_classification_labels)   
         return img   
 
 # gesture detection
     @staticmethod
     def hands_detect_switch(flag=False):
+        from .hands_detection import DetectHands
         Vilib.detect_hands = DetectHands()
         Vilib.detect_obj_parameter['gdf_flag'] = flag
 
@@ -1410,6 +1411,7 @@ class Vilib(object):
 # pose detection
     @staticmethod
     def pose_detect_switch(flag=False):
+        from .pose_detection import DetectPose
         Vilib.pose_detect = DetectPose()
         Vilib.detect_obj_parameter['pdf_flag'] = flag
 
