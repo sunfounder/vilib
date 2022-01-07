@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 import os
 import time
 import datetime
@@ -17,6 +18,15 @@ from multiprocessing import Process, Manager
 
 from flask import Flask, render_template, Response
 
+# user and User home directory
+User = os.popen('echo ${SUDO_USER:-$LOGNAME}').readline().strip()
+UserHome = os.popen('getent passwd %s | cut -d: -f 6'%User).readline().strip()
+# print(User)  # pi
+# print(UserHome) # /home/pi
+
+# Default path for pictures and videos
+Default_Pictures_Path = '%s/Pictures/vilib/'%UserHome
+Default_Videos_Path = '%s/Videos/vilib/'%UserHome
 
 # utils
 def run_command(cmd):
@@ -35,6 +45,18 @@ def findContours(img):
     else:
         contours, hierarchy = _tuple
     return contours, hierarchy
+
+def getIP():
+    wlan0 = os.popen("ifconfig wlan0 |awk '/inet/'|awk 'NR==1 {print $2}'").readline().strip('\n')
+    eth0 = os.popen("ifconfig eth0 |awk '/inet/'|awk 'NR==1 {print $2}'").readline().strip('\n')
+
+    if wlan0 == '':
+        wlan0 = None
+    if eth0 == '':
+        eth0 = None
+
+    return wlan0,eth0
+
 
 # region Main : parameter definition
 traffic_num_list = [i for i in range(4)]
@@ -77,7 +99,9 @@ objects_detection_labels = '/opt/vilib/coco_labels.txt'
 # endregion : parameter definition
 
 # region Main : flask
+os.environ['FLASK_ENV'] =  'development'
 app = Flask(__name__)
+
 @app.route('/')
 def index():
     """Video streaming home page."""
@@ -130,7 +154,11 @@ def video_feed_png():
 
 
 def web_camera_start():
-    app.run(host='0.0.0.0', port=9000,threaded=True)
+    try:
+        app.run(host='0.0.0.0', port=9000, threaded=True, debug=False)
+    except Exception as e:
+        # print(e)
+        pass
 
 # endregion : flask
 
@@ -203,6 +231,9 @@ class Vilib(object):
 
     video_flag = False
 
+    flask_process = None
+    camera_thread = None
+
 # set parameters
 
     # 读取人脸识别模型
@@ -274,13 +305,16 @@ class Vilib(object):
     detect_obj_parameter['calibrate_flag'] = False   
     detect_obj_parameter['object_follow_flag'] = False
     detect_obj_parameter['qr_flag'] = False
+
     detect_obj_parameter['camera_start_flag'] = False
     detect_obj_parameter['imshow_flag'] = False
+    detect_obj_parameter['web_display_flag'] = False
+
     detect_obj_parameter['odf_flag'] = False
     detect_obj_parameter['icf_flag'] = False
     detect_obj_parameter['gdf_flag'] = False
     detect_obj_parameter['pdf_flag'] = False
-
+    
     # QR_code
     detect_obj_parameter['qr_data'] = "None"
     detect_obj_parameter['qr_x'] = 320
@@ -296,7 +330,7 @@ class Vilib(object):
     # picture
     detect_obj_parameter['picture_flag'] = False
     detect_obj_parameter['process_picture'] = True
-    detect_obj_parameter['picture_path'] = '/home/pi/picture_file/' + datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')+ '.jpg'
+    detect_obj_parameter['picture_path'] = Default_Pictures_Path + datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')+ '.jpg'
 
     detect_obj_parameter['video_flag'] = None
 
@@ -518,7 +552,7 @@ class Vilib(object):
     def qrcode_detect_switch(flag=False):
         Vilib.detect_obj_parameter['qr_flag']  = flag
 
-# 摄像头的线程
+# camera()
     @staticmethod
     def camera_clone():
         Vilib.camera()     
@@ -526,6 +560,7 @@ class Vilib(object):
     @staticmethod
     def camera():
         global effect
+        flask_thread = None
         camera = PiCamera()
         camera.resolution = (640, 480)
         camera.image_effect = EFFECTS[Vilib.detect_obj_parameter['eff']]
@@ -622,17 +657,33 @@ class Vilib(object):
                         camera.close()
                         break
                      
-                    if  Vilib.detect_obj_parameter['imshow_flag'] == True:      
-                        cv2.imshow("Picamera",img)
+                    if  Vilib.detect_obj_parameter['imshow_flag'] == True:
+                        try:      
+                            cv2.imshow("Picamera",img)
+                            cv2.waitKey(1) # 1 ms
+                        except Exception as e: 
+                            print(e)
 
-                        if cv2.waitKey(1) & 0xFF == ord('q'):
-                            break
-                        if cv2.waitKey(1) & 0xff == 27: # press 'ESC' to quit
-                            break
-                    
                     if Vilib.detect_obj_parameter['camera_start_flag'] == False:
-                        break
-                    
+                        break    
+
+                    # web_display
+                    if Vilib.detect_obj_parameter['web_display_flag'] == True:
+                        if flask_thread == None or flask_thread.is_alive() == False:
+                            print('Starting network video streaming ...')
+                            wlan0,eth0 = getIP()
+                            if wlan0 != None:
+                                ip = wlan0     
+                            else:
+                                ip = eth0
+                            print('\nRunning on: http://%s:9000/mjpg\n'%ip)
+                            flask_thread = threading.Thread(name='flask_thread',target=web_camera_start)
+                            flask_thread.setDaemon(True)
+                            flask_thread.start()
+                    elif Vilib.detect_obj_parameter['web_display_flag'] == False:
+                        if flask_thread != None and flask_thread.is_alive():
+                            flask_thread.join(timeout=0.2)
+
                     Vilib.img_array[0] = img
                     rawCapture.truncate(0)
                     end_time = time.time()
@@ -642,7 +693,7 @@ class Vilib(object):
                     break
 
                 picture_time = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
-                Vilib.detect_obj_parameter['picture_path'] = '/home/pi/picture_file/' + picture_time + '.jpg'
+                Vilib.detect_obj_parameter['picture_path'] = Default_Pictures_Path + picture_time + '.jpg'
 
                 a_t = "sudo raspistill -t 250  -w 2592 -h 1944 -vf" + " -rot " + str(change_type_dict['rotation']) + " -ifx " + str(EFFECTS[Vilib.detect_obj_parameter['eff']]) +" -o " + Vilib.detect_obj_parameter['picture_path']
                 
@@ -654,7 +705,6 @@ class Vilib(object):
                     add_text_to_image(Vilib.detect_obj_parameter['picture_path'],Vilib.detect_obj_parameter['watermark'])
 
                 #init again
-
                 camera = PiCamera()
                 camera.resolution = (640,480)
                 camera.hflip = Vilib.detect_obj_parameter['camera_hflip']
@@ -683,7 +733,7 @@ class Vilib(object):
     def get_picture(process_picture):
         Vilib.detect_obj_parameter['picture_flag'] = True
         Vilib.detect_obj_parameter['process_picture'] = process_picture
-        Vilib.detect_obj_parameter['picture_path'] = '/home/pi/picture_file/' + datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S') + '.jpg'
+        Vilib.detect_obj_parameter['picture_path'] = Default_Pictures_Path + datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S') + '.jpg'
 
 # # 拍照控制接口
 #     @staticmethod
@@ -1205,51 +1255,63 @@ class Vilib(object):
 # 开启摄像头
     @staticmethod
     def camera_start(vflip=False, hflip=False):
-
         Vilib.detect_obj_parameter['camera_vflip'] = vflip
         Vilib.detect_obj_parameter['camera_hflip'] = hflip       
         Vilib.detect_obj_parameter['camera_start_flag'] = True
-        worker = threading.Thread(target=Vilib.camera_clone, name="camera_satrt")
-        worker.start()
+        Vilib.camera_thread = threading.Thread(target=Vilib.camera_clone, name="camera_satrt")
+        Vilib.camera_thread.start()
 
+# 关闭摄像头
     @staticmethod
-    def camera_close():
-        Vilib.detect_obj_parameter['camera_start_flag'] = False
-        
+    def camera_close(): 
+        if Vilib.camera_thread != None:
+            Vilib.detect_obj_parameter['camera_start_flag'] = False
+
+
 # 开启摄像头网络传输
     @staticmethod
-    def camera_flask():
-        print('Starting network video streaming ...')
-        worker = threading.Thread(name='worker 1',target=web_camera_start)
-        worker.start()
+    def camera_flask():           
+        Vilib.detect_obj_parameter['web_display_flag'] = True
+
+# close flask
+    @staticmethod
+    def web_display_close(): 
+        Vilib.detect_obj_parameter['web_display_flag'] = False
+
 
 # 1. 显示在树莓派桌面，在浏览器输入蜘蛛的IP地址可以看到画面
     @staticmethod
     def display(local=True,web=True):
-        #显示窗口 加上销毁窗口会安全些
-        #判断有没有桌面系统
-        if local == True:
-            if not "SSH_CONNECTION" in os.environ and os.path.exists('/usr/share/xsessions/'):
-                Vilib.detect_obj_parameter['imshow_flag'] = True  
-                print("imshow start ...")       
-            else:
-                Vilib.detect_obj_parameter['imshow_flag'] = False 
-                print("local display failed, because there is no gui.") 
-        #开始flask 流传输
-        if web == True:
-            Vilib.camera_flask()
-
+        # cheack camera thread is_alive
+        if Vilib.camera_thread != None and Vilib.camera_thread.is_alive():
+            # check gui
+            if local == True:
+                if os.path.exists('/usr/share/xsessions/'):
+                    os.environ['XAUTHORITY'] = '%s/.Xauthority'%UserHome
+                    os.environ['DISPLAY'] = ':0.0'
+                    Vilib.detect_obj_parameter['imshow_flag'] = True  
+                    print("imshow start ...")       
+                else:
+                    Vilib.detect_obj_parameter['imshow_flag'] = False 
+                    print("local display failed, because there is no gui.") 
+            # web video
+            if web == True:
+                Vilib.detect_obj_parameter['web_display_flag'] = True 
+        else:
+            print('Error: Please execute < camera_start() > first.')
 
 # 2. 拍照保存
     @staticmethod
-    def take_photo(photo_name,path='/home/pi/picture'):
-        # cv2.imwrite 对于没有的路径不会自动创建，原先没有该路径会写入失败,需要手动检测路径、创建路径
+    def take_photo(photo_name,path=Default_Pictures_Path):
+        # check path
         while not os.path.exists(path):
             # print('Path does not exist. Creating path now ... ')
-            os.system('sudo mkdir -p '+path)
-            os.system('sudo chmod -R 777 '+path)
+            os.makedirs(name=path,
+                        mode=0o777,
+                        exist_ok=True
+            )
             time.sleep(0.01) 
-        #保存图片
+        # save photo
         img =  Vilib.img_array[0]      
         for _ in range(5):
             if img is  not None:
@@ -1273,23 +1335,20 @@ class Vilib(object):
     rec_video_set["framesize"] = (640,480)
     rec_video_set["isColor"] = True
 
-
     rec_video_set["name"] = "default"
-    rec_video_set["path"] = "/home/pi/video"
+    rec_video_set["path"] = Default_Videos_Path
 
     rec_video_set["start_flag"] = False
-    #rec_video_set["pause_flag"] = False
-    rec_video_set["stop_flag"] =  False  
-        
-    
+    rec_video_set["stop_flag"] =  False   
 
     @staticmethod
     def rec_video_work():
-        
         while not os.path.exists(Vilib.rec_video_set["path"]):
-            print('Not existing path')
-            os.system('sudo mkdir '+Vilib.rec_video_set["path"])
-            os.system('sudo chmod 777 '+Vilib.rec_video_set["path"])
+            # print('Path does not exist. Creating path now ... ')
+            os.makedirs(name=Vilib.rec_video_set["path"],
+                        mode=0o777,
+                        exist_ok=True
+            )
             time.sleep(0.01)
         video_out = cv2.VideoWriter(Vilib.rec_video_set["path"]+'/'+Vilib.rec_video_set["name"]+'.avi',
                                     Vilib.rec_video_set["fourcc"], Vilib.rec_video_set["fps"], 
@@ -1304,10 +1363,9 @@ class Vilib(object):
 
     @staticmethod
     def rec_video_run():
-        rec_thread = threading.Thread(name = 'rec_video', target=Vilib.rec_video_work)
+        rec_thread = threading.Thread(name='rec_video', target=Vilib.rec_video_work)
+        rec_thread.setDaemon(True)
         rec_thread.start()
-        Vilib.rec_video_set["start_flag"] = True
-        print("run...")
 
     @staticmethod
     def rec_video_start():
@@ -1421,13 +1479,4 @@ class Vilib(object):
             img,Vilib.detect_obj_parameter['body_joints'] = Vilib.pose_detect.work(image=img)   
         return img
 
-if __name__ == "__main__":
-    
-    pass
 
-    
-    #rec_video_test()
-    #qr_coder_test()
-    #take_photo_test() 
-    
-    #face_training("whatever","/home/pi/trainer/Hugh") 
