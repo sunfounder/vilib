@@ -21,9 +21,9 @@ APT_INSTALL_LIST = [
     # "python3-setuptools",
 
     # install compilation tools
-    "cmake"
-    "gcc" 
-    "g++"
+    "cmake",
+    "gcc",
+    "g++",
     # install numpy
     "python3-numpy",
     # GTK support for GUI features, Camera support (v4l), Media Support (ffmpeg, gstreamer) etc
@@ -112,7 +112,7 @@ def install():
     _, result = run_command("ls /opt")
     if "vilib" not in result:
         do(msg="create dir",
-            cmd='mkdir /opt/vilib')
+            cmd='sudo mkdir /opt/vilib')
         do(msg="copy workspace",
             cmd='sudo cp -r ./workspace/* /opt/vilib/')
         do(msg="add write permission to log file",
