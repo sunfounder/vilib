@@ -109,14 +109,15 @@ def install():
                 cmd='sudo pip3 install %s'%dep)
 
     print("Create workspace")
-    _, result = run_command("ls /opt")
-    if "vilib" not in result:
-        do(msg="create dir",
-            cmd='sudo mkdir /opt/vilib')
-        do(msg="copy workspace",
-            cmd='sudo cp -r ./workspace/* /opt/vilib/')
-        do(msg="add write permission to log file",
-            cmd='sudo chmod 666 /opt/vilib/log')
+    if not os.path.exists('/opt'):
+        os.mkdir('/opt')
+        os.popen('sudo chmod 774 /opt')
+    do(msg="create dir",
+        cmd='sudo mkdir -pf /opt/vilib')
+    do(msg="copy workspace",
+        cmd='sudo cp -r ./workspace/* /opt/vilib/')
+    do(msg="add write permission to log file",
+        cmd='sudo touch /opt/vilib/log && sudo chmod 774 /opt/vilib/log')
 
     print("Install vilib python package")
     do(msg="run setup file",
