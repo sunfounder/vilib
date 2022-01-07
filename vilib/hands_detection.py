@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 import cv2
 import mediapipe as mp
 from ast import literal_eval
