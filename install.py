@@ -113,7 +113,7 @@ def install():
         os.mkdir('/opt')
         os.popen('sudo chmod 774 /opt')
     do(msg="create dir",
-        cmd='sudo mkdir -pf /opt/vilib')
+        cmd='sudo mkdir -p /opt/vilib')
     do(msg="copy workspace",
         cmd='sudo cp -r ./workspace/* /opt/vilib/')
     do(msg="add write permission to log file",
