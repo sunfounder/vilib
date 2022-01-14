@@ -35,6 +35,7 @@ APT_INSTALL_LIST = [
     "libgstreamer1.0-dev",
     "libgtk2.0-dev",
     "libgtk-3-dev",
+    "libjasper-dev",
     # update image format support library
     "libpng-dev",
     "libjpeg-dev",
@@ -42,7 +43,7 @@ APT_INSTALL_LIST = [
     "libtiff-dev",
     "libwebp-dev",
     # install python3-opencv
-    "python3-opencv",
+    "python3-opencv", 
     # install python3-picamera
     "python3-picamera",
     # install mediapipe-rpi3 dependency
@@ -58,7 +59,7 @@ APT_INSTALL_LIST = [
     "libvdpau1", 
     "libharfbuzz0b", 
     "libbluray2", 
-    "libatlas-base-dev", 
+    "libatlas-base-dev",
     "libhdf5-103", 
     "libdc1394-22", 
     "libopenexr23",
