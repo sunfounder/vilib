@@ -98,11 +98,11 @@ def install():
             quit()
 
     print("vilib install process starts")
-    if "--no-dep" not in options:    
+    if "--no-dep" not in options:  
+        do(msg="dpkg configure",
+            cmd='sudo dpkg --configure -a')  
         do(msg="update apt",
             cmd='sudo apt update -y')
-        # do(msg="upgrade apt",
-        #     cmd='sudo apt upgrade -y')
 
         print("Install dependency")
         for dep in APT_INSTALL_LIST:
