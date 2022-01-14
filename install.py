@@ -84,9 +84,9 @@ def install():
     options = []
     if len(sys.argv) > 1:
         options = sys.argv[1:]
-        for o in options:
-            if o not in avaiable_options:
-                print("Option {} is not found.".format(o))
+        for opt in options:
+            if opt not in avaiable_options:
+                print("Option {} is not found.".format(opt))
                 print(usage)
                 quit()
         if "-h" in options or "--help" in options:
@@ -113,7 +113,7 @@ def install():
         os.mkdir('/opt')
         os.popen('sudo chmod 774 /opt')
     do(msg="create dir",
-        cmd='sudo mkdir -pf /opt/vilib')
+        cmd='sudo mkdir -p /opt/vilib')
     do(msg="copy workspace",
         cmd='sudo cp -r ./workspace/* /opt/vilib/')
     do(msg="add write permission to log file",
