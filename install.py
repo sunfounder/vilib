@@ -75,6 +75,7 @@ PIP_INSTALL_LIST = [
     "imutils",
     "mediapipe-rpi3",
     # install tflite_runtime
+    # https://github.com/google-coral/pycoral/releases/
     # "https://dl.google.com/coral/python/tflite_runtime-2.1.0.post1-cp37-cp37m-linux_armv7l.whl"
     "./tflite_runtime-2.1.0.post1-cp37-cp37m-linux_armv7l.whl",
     # "face-recognition",
