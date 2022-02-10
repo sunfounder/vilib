@@ -1,6 +1,16 @@
 # Change Log 
 
+
 ## [Unreleased]
+
+### Changed
+- [ ] Compatible with Raspbain version bullseye
+- [ ] Compatible with python version 3.9
+- fix display bug
+- fix detect_obj_parameter error when close
+
+
+## [0.0.2] - 2022-1-14
 
 ### Added
 - Add change log
