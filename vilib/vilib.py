@@ -247,7 +247,8 @@ class Vilib(object):
         print(e)
 
     # 创建共享字典，提供外部接口动态修改，以及返回字典内容
-    detect_obj_parameter = Manager().dict()
+    # detect_obj_parameter = Manager().dict()
+    detect_obj_parameter = {}
     img_array = Manager().list(range(2))
 
     # 默认的颜色识别颜色为红色
@@ -711,7 +712,7 @@ class Vilib(object):
                 # run_command(a_t)
 
                 # if Vilib.detect_obj_parameter['watermark_flag'] == True:
-                    add_text_to_image(Vilib.detect_obj_parameter['picture_path'],Vilib.detect_obj_parameter['watermark'])
+                #     add_text_to_image(Vilib.detect_obj_parameter['picture_path'],Vilib.detect_obj_parameter['watermark'])
 
                 #init again
                 camera = PiCamera()
@@ -722,7 +723,9 @@ class Vilib(object):
                 camera.image_effect = e
                 rawCapture = PiRGBArray(camera, size=camera.resolution) 
                 Vilib.detect_obj_parameter['photo_button_flag'] = False
-                   
+
+        except KeyboardInterrupt:
+            pass       
         finally:
             print('camera close')
             camera.close()
@@ -1233,7 +1236,7 @@ class Vilib(object):
     def camera_close(): 
         if Vilib.camera_thread != None:
             Vilib.detect_obj_parameter['camera_start_flag'] = False
-
+            time.sleep(0.1)
 
 # 开启摄像头网络传输
     @staticmethod
