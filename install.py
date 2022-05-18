@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 import os, sys
+import time
+import threading
 
 errors = []
 
@@ -45,7 +47,7 @@ APT_INSTALL_LIST = [
     "python3-opencv", 
     # install additional dependencies for opencv
     "libjasper-dev",
-    "libqtgui4",
+    "libqtgui4", # --------
     "libqt4-test",
     # install python3-picamera
     "python3-picamera",
@@ -65,8 +67,7 @@ APT_INSTALL_LIST = [
     "libatlas-base-dev",
     "libhdf5-103", 
     "libdc1394-22", 
-    "libopenexr23",
-    # pyzbar:one-dimensional barcodes and QR codes 
+    "libopenexr23", 
     "libzbar0",
 ]
 
@@ -78,9 +79,8 @@ PIP_INSTALL_LIST = [
     # https://github.com/google-coral/pycoral/releases/
     # "https://dl.google.com/coral/python/tflite_runtime-2.1.0.post1-cp37-cp37m-linux_armv7l.whl"
     "./tflite_runtime-2.1.0.post1-cp37-cp37m-linux_armv7l.whl",
-    # "face-recognition",
-    # pyzbar:one-dimensional barcodes and QR codes 
-    "pyzbar",
+    # "./tflite_runtime-2.5.0.post1-cp39-cp39-linux_armv7l.whl",
+    "pyzbar", # pyzbar:one-dimensional barcodes and QR codes
     "pyzbar[scripts]",
 ]
 
@@ -102,13 +102,13 @@ def install():
     if "--no-dep" not in options:  
         do(msg="dpkg configure",
             cmd='sudo dpkg --configure -a')  
-        do(msg="update apt",
-            cmd='sudo apt update -y')
+        do(msg="update apt-get",
+            cmd='sudo apt-get update -y')
 
         print("Install dependency")
         for dep in APT_INSTALL_LIST:
             do(msg="install %s"%dep,
-                cmd='sudo apt install %s -y'%dep)
+                cmd='sudo apt-get install %s -y'%dep)
         for dep in PIP_INSTALL_LIST:
             do(msg="install %s"%dep,
                 cmd='sudo pip3 install %s'%dep)
@@ -150,16 +150,44 @@ def run_command(cmd=""):
     return status, result
 
 
+at_work_tip_sw = False
+def working_tip():
+    char = ['/', '-', '\\', '|']
+    i = 0
+    global at_work_tip_sw
+    while at_work_tip_sw:  
+            i = (i+1)%4 
+            sys.stdout.write('%s\033[1D'%char[i])
+            sys.stdout.flush()
+            time.sleep(0.5)
+
+    sys.stdout.write(' \033[1D')
+    sys.stdout.flush()    
+        
+
 def do(msg="", cmd=""):
     print(" - %s... " % (msg), end='', flush=True)
+    # at_work_tip start 
+    global at_work_tip_sw
+    at_work_tip_sw = True
+    _thread = threading.Thread(target=working_tip)
+    _thread.setDaemon(True)
+    _thread.start()
+    # process run
     status, result = run_command(cmd)
     # print(status, result)
+    # at_work_tip stop
+    at_work_tip_sw = False
+    while _thread.isAlive():
+        time.sleep(0.1)
+    # status
     if status == 0 or status == None or result == "":
         print('Done')
     else:
         print('Error')
         errors.append("%s error:\n  Status:%s\n  Error:%s" %
                       (msg, status, result))
+
 
 if __name__ == "__main__":
     try:
