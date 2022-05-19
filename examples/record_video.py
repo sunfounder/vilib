@@ -26,8 +26,7 @@ def main():
     print(manual)
     while True:
         # read keyboard
-        key = readchar.readkey()
-        key = key.lower()
+        key = readchar.readkey().lower()
         # start,pause
         if key == 'q':
             key = None
@@ -64,3 +63,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+

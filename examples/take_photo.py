@@ -4,10 +4,11 @@ from vilib import Vilib
 
 def main():
     Vilib.camera_start(vflip=False,hflip=False)
-    Vilib.display()
+    Vilib.display(local=True,web=True)
+
 
     i = 0
-    path = "/home/pi/picture/vilib/photos"
+    path = "/home/pi/Pictures/vilib/photos"
   
     while True:
         if input() == 'q': 
@@ -19,3 +20,6 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+    
