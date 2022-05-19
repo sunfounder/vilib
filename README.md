@@ -1,5 +1,5 @@
 
-# vilib -- Vision Library
+# vilib -- Vision Library for Raspberry Pi
 
 Quick Links:
 
