@@ -1,13 +1,20 @@
 # Change Log 
 
 
-## [Unreleased]
+## [0.0.3] - 2022-5-19
 
-### Changed
-- [ ] Compatible with Raspbain version bullseye
-- [ ] Compatible with python version 3.9
-- fix display bug
-- fix detect_obj_parameter error when close
+### Fixed
+- Compatible with python version 3.9
+- Fix display bug
+- Fix detect_obj_parameter error when close
+- Fix the bug that only the first video is valid
+
+### Added
+- Add install working tip
+- Uniform version file
+
+### Optimized
+- Optimize some details of examples
 
 
 ## [0.0.2] - 2022-1-14
