@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
 import os, sys
+from platform import python_branch, python_implementation
 import time
 import threading
+sys.path.append('./vilib')
+from version import __version__
 
 errors = []
 
@@ -16,18 +19,43 @@ Options:
     -h         --help      Show this help text and exit
 '''
 
+def run_command(cmd=""):
+    import subprocess
+    p = subprocess.Popen(
+        cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    result = p.stdout.read().decode('utf-8')
+    status = p.poll()
+    return status, result
+
+
+def check_rpi_model():
+    _, result = run_command("cat /proc/device-tree/model |awk '{print $3}'")
+    result = result.strip()
+    if result == '3':
+        return 3
+    elif result == '4':
+        return 4
+    else:
+        return None
+
+
+def check_python_version():
+    import sys
+    major = sys.version_info.major
+    minor = sys.version_info.minor
+    micro = sys.version_info.micro
+    return major, minor, micro
+
+
+rpi_model = check_rpi_model()
+python_version = check_python_version()
+
 
 APT_INSTALL_LIST = [ 
-    # Python3 package management tool
-    # "python3-pip",        # 
-    # "python3-setuptools",
-
     # install compilation tools
     "cmake",
     "gcc",
     "g++",
-    # install numpy
-    "python3-numpy",
     # GTK support for GUI features, Camera support (v4l), Media Support (ffmpeg, gstreamer) etc
     # https://docs.opencv.org/4.x/d2/de6/tutorial_py_setup_in_ubuntu.html   
     "libavcodec-dev", 
@@ -71,21 +99,43 @@ APT_INSTALL_LIST = [
     "libzbar0",
 ]
 
+
 PIP_INSTALL_LIST = [
+    "numpy==1.21.4", 
     "Flask",
     "imutils",
-    "mediapipe-rpi3",
-    # install tflite_runtime
-    # https://github.com/google-coral/pycoral/releases/
-    # "https://dl.google.com/coral/python/tflite_runtime-2.1.0.post1-cp37-cp37m-linux_armv7l.whl"
-    "./tflite_runtime-2.1.0.post1-cp37-cp37m-linux_armv7l.whl",
-    # "./tflite_runtime-2.5.0.post1-cp39-cp39-linux_armv7l.whl",
     "pyzbar", # pyzbar:one-dimensional barcodes and QR codes
     "pyzbar[scripts]",
+    "readchar",
 ]
 
 
+# select mediapipe version for raspberry pi 3 or 4
+if rpi_model == 4:
+    PIP_INSTALL_LIST.append("mediapipe-rpi4")
+else:
+    PIP_INSTALL_LIST.append("mediapipe-rpi3")
+
+
+# select tflite_runtime version
+# https://github.com/google-coral/pycoral/releases/
+if python_version[0] == 3:
+    if python_version[1] == 7:
+        PIP_INSTALL_LIST.append("tflite_runtime-2.1.0.post1-cp37-cp37m-linux_armv7l.whl")
+    elif python_version[1] == 8:
+        PIP_INSTALL_LIST.append("tflite_runtime-2.5.0.post1-cp38-cp38-linux_armv7l.whl")
+    elif python_version[1] == 9:
+        PIP_INSTALL_LIST.append("tflite_runtime-2.5.0.post1-cp39-cp39-linux_armv7l.whl")
+else:
+    print('[python version incompatibility] Currently only python 3.7, 3.8 and 3.9 are supported.')
+    sys.exit(1)
+
+
+# main function
 def install():
+
+    user_name = os.getlogin()
+
     options = []
     if len(sys.argv) > 1:
         options = sys.argv[1:]
@@ -98,7 +148,7 @@ def install():
             print(usage)
             quit()
 
-    print("vilib install process starts")
+    print("Start installing vilib %s for user %s"%(__version__ ,user_name))
     if "--no-dep" not in options:  
         do(msg="dpkg configure",
             cmd='sudo dpkg --configure -a')  
@@ -116,14 +166,18 @@ def install():
     print("Create workspace")
     if not os.path.exists('/opt'):
         os.mkdir('/opt')
-        os.popen('sudo chmod 774 /opt')
+        run_command('sudo chmod 774 /opt')
+        run_command('sudo chown -R %s:%s /opt'%(user_name, user_name))
     do(msg="create dir",
-        cmd='sudo mkdir -p /opt/vilib')
+        cmd='sudo mkdir -p /opt/vilib'
+        + ' && sudo chmod 774 /opt/vilib'
+        + ' && sudo chown -R %s:%s /opt/vilib'%(user_name, user_name)
+        )
     do(msg="copy workspace",
-        cmd='sudo cp -r ./workspace/* /opt/vilib/')
-    do(msg="add write permission to log file",
-        cmd='sudo touch /opt/vilib/log && sudo chmod 774 /opt/vilib/log')
-
+        cmd='sudo cp -r ./workspace/* /opt/vilib/'
+        + ' && sudo chmod 774 /opt/vilib/*'
+        + ' && sudo chown -R %s:%s /opt/vilib/*'%(user_name, user_name)
+        )
     print("Install vilib python package")
     do(msg="run setup file",
         cmd='sudo python3 setup.py install')
@@ -141,13 +195,7 @@ def install():
         sys.exit(1)
 
 
-def run_command(cmd=""):
-    import subprocess
-    p = subprocess.Popen(
-        cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-    result = p.stdout.read().decode('utf-8')
-    status = p.poll()
-    return status, result
+
 
 
 at_work_tip_sw = False
@@ -157,11 +205,13 @@ def working_tip():
     global at_work_tip_sw
     while at_work_tip_sw:  
             i = (i+1)%4 
+            sys.stdout.write('\033[?25l') # cursor invisible
             sys.stdout.write('%s\033[1D'%char[i])
             sys.stdout.flush()
             time.sleep(0.5)
 
     sys.stdout.write(' \033[1D')
+    sys.stdout.write('\033[?25h') # cursor visible 
     sys.stdout.flush()    
         
 
