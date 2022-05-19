@@ -18,15 +18,15 @@ from multiprocessing import Process, Manager
 
 from flask import Flask, render_template, Response
 
-# user and User home directory
-User = os.popen('echo ${SUDO_USER:-$LOGNAME}').readline().strip()
-UserHome = os.popen('getent passwd %s | cut -d: -f 6'%User).readline().strip()
-# print(User)  # pi
-# print(UserHome) # /home/pi
+# user and user home directory
+user = os.getlogin()
+user_home = os.popen('getent passwd %s | cut -d: -f 6'%user).readline().strip()
+# print(user)  # pi
+# print(user_home) # /home/pi
 
 # Default path for pictures and videos
-Default_Pictures_Path = '%s/Pictures/vilib/'%UserHome
-Default_Videos_Path = '%s/Videos/vilib/'%UserHome
+Default_Pictures_Path = '%s/Pictures/vilib/'%user_home
+Default_Videos_Path = '%s/Videos/vilib/'%user_home
 
 # utils
 def run_command(cmd):
@@ -1257,7 +1257,7 @@ class Vilib(object):
             # check gui
             if local == True:
                 # if os.path.exists('/usr/share/xsessions/'):
-                #     os.environ['XAUTHORITY'] = '%s/.Xauthority'%UserHome
+                #     os.environ['XAUTHORITY'] = '%s/.Xauthority'%user_home
                 #     os.environ['DISPLAY'] = ':0.0'
                 #     Vilib.detect_obj_parameter['imshow_flag'] = True  
                 #     print("imshow start ...")   
@@ -1332,18 +1332,25 @@ class Vilib(object):
             if Vilib.rec_video_set["start_flag"] == True:
                 video_out.write(Vilib.img_array[0])          
             if Vilib.rec_video_set["stop_flag"] == True:
+                video_out.release() # note need to release the video writer
                 Vilib.rec_video_set["start_flag"] == False
                 break
 
+
+    rec_thread = None
     @staticmethod
     def rec_video_run():
-        rec_thread = threading.Thread(name='rec_video', target=Vilib.rec_video_work)
-        rec_thread.setDaemon(True)
-        rec_thread.start()
+        if Vilib.rec_thread != None:
+            Vilib.rec_video_stop()
+        Vilib.rec_video_set["stop_flag"] = False
+        Vilib.rec_thread = threading.Thread(name='rec_video', target=Vilib.rec_video_work)
+        Vilib.rec_thread.setDaemon(True)
+        Vilib.rec_thread.start()
 
     @staticmethod
     def rec_video_start():
         Vilib.rec_video_set["start_flag"] = True 
+        Vilib.rec_video_set["stop_flag"] = False
 
     @staticmethod
     def rec_video_pause():
@@ -1353,6 +1360,10 @@ class Vilib(object):
     def rec_video_stop():
         Vilib.rec_video_set["start_flag"] == False
         Vilib.rec_video_set["stop_flag"] = True
+        if Vilib.rec_thread != None:
+            Vilib.rec_thread.join(3)
+            Vilib.rec_thread = None 
+
                         
 # 4.颜色识别 
     @staticmethod 
