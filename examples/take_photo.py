@@ -6,15 +6,13 @@ def main():
     Vilib.camera_start(vflip=False,hflip=False)
     Vilib.display(local=True,web=True)
 
-
-    i = 0
     path = "/home/pi/Pictures/vilib/photos"
   
     while True:
         if input() == 'q': 
             _time = time.strftime("%y-%m-%d_%H-%M-%S", time.localtime())
             Vilib.take_photo(str(_time),path)
-            print("take_photo:%s.jpg"%_time)
+            print("The photo save as:%s/%s.jpg"%(path, _time))
             time.sleep(0.1)
 
 
