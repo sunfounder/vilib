@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 import os, sys
-from platform import python_branch, python_implementation
 import time
 import threading
 sys.path.append('./vilib')
@@ -72,7 +71,7 @@ APT_INSTALL_LIST = [
     "libtiff-dev",
     "libwebp-dev",
     # install python3-opencv
-    "python3-opencv", 
+    # "python3-opencv", 
     # install additional dependencies for opencv
     "libjasper-dev",
     "libqtgui4", # --------
@@ -101,6 +100,7 @@ APT_INSTALL_LIST = [
 
 
 PIP_INSTALL_LIST = [
+    "opencv-contrib-python==4.5.3.56",
     "numpy==1.21.4", 
     "Flask",
     "imutils",
