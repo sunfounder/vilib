@@ -228,7 +228,7 @@ def do(msg="", cmd=""):
     # print(status, result)
     # at_work_tip stop
     at_work_tip_sw = False
-    while _thread.isAlive():
+    while _thread.is_alive():
         time.sleep(0.1)
     # status
     if status == 0 or status == None or result == "":
