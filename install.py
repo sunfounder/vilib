@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+from distutils.log import warn
 import os, sys
 import time
 import threading
@@ -6,6 +7,7 @@ sys.path.append('./vilib')
 from version import __version__
 
 errors = []
+warns = []
 
 avaiable_options = ['-h', '--help', '--no-dep']
 
@@ -37,6 +39,10 @@ def check_rpi_model():
     else:
         return None
 
+def check_raspbain_version():
+    _, result = run_command("cat /etc/debian_version|awk -F. '{print $1}'")
+    return result.strip()
+
 
 def check_python_version():
     import sys
@@ -48,7 +54,7 @@ def check_python_version():
 
 rpi_model = check_rpi_model()
 python_version = check_python_version()
-
+raspbain_version = check_raspbain_version()
 
 APT_INSTALL_LIST = [ 
     # install compilation tools
@@ -74,8 +80,8 @@ APT_INSTALL_LIST = [
     # "python3-opencv", 
     # install additional dependencies for opencv
     "libjasper-dev",
-    "libqtgui4", # --------
-    "libqt4-test",
+    # "libqtgui4", # --------
+    # "libqt4-test",
     # install python3-picamera
     "python3-picamera",
     # install mediapipe-rpi3 dependency
@@ -94,7 +100,7 @@ APT_INSTALL_LIST = [
     "libatlas-base-dev",
     "libhdf5-103", 
     "libdc1394-22", 
-    "libopenexr23", 
+    # "libopenexr23", 
     "libzbar0",
 ]
 
@@ -109,12 +115,22 @@ PIP_INSTALL_LIST = [
     "readchar",
 ]
 
+if raspbain_version == "10":
+    APT_INSTALL_LIST.append("libopenexr23")
+elif raspbain_version == "11":
+    APT_INSTALL_LIST.append("libopenexr25")
+    
+    warns.append('''\033[33m
+ Mediapipe is currently only supported in Raspbian Buster !
+ Object detection and pose detection are not working properly !
+    \033[0m''')
 
 # select mediapipe version for raspberry pi 3 or 4
 if rpi_model == 4:
     PIP_INSTALL_LIST.append("mediapipe-rpi4")
 else:
     PIP_INSTALL_LIST.append("mediapipe-rpi3")
+
 
 
 # select tflite_runtime version
@@ -129,6 +145,7 @@ if python_version[0] == 3:
 else:
     print('[python version incompatibility] Currently only python 3.7, 3.8 and 3.9 are supported.')
     sys.exit(1)
+
 
 
 # main function
@@ -149,6 +166,11 @@ def install():
             quit()
 
     print("Start installing vilib %s for user %s"%(__version__ ,user_name))
+    print("Python version: %s.%s.%s"%(python_version[0], python_version[1], python_version[2]))
+    print("Raspbian version: %s"%(raspbain_version))
+    print("")
+
+
     if "--no-dep" not in options:  
         do(msg="dpkg configure",
             cmd='sudo dpkg --configure -a')  
@@ -192,10 +214,10 @@ def install():
         for error in errors:
             print(error)
         print("Try to fix it yourself, or contact service@sunfounder.com with this message")
-        sys.exit(1)
 
-
-
+    if len(warns) != 0:
+        for warn in warns:
+            print(warn)
 
 
 at_work_tip_sw = False
