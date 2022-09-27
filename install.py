@@ -112,7 +112,8 @@ PIP_INSTALL_LIST = [
     "imutils",
     "pyzbar", # pyzbar:one-dimensional barcodes and QR codes
     "pyzbar[scripts]",
-    "readchar",
+    "readchar", # will update setuptools to the latest version
+    "\'setuptools<=40.8.0\'",
 ]
 
 if raspbain_version == "10":
