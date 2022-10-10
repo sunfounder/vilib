@@ -113,7 +113,7 @@ PIP_INSTALL_LIST = [
     "pyzbar", # pyzbar:one-dimensional barcodes and QR codes
     "pyzbar[scripts]",
     "readchar", # will update setuptools to the latest version
-    "\'setuptools<=40.8.0\'",
+    "\'setuptools>59.0,<60.0\'", # The default installation location will change after setuptools version 60.0
 ]
 
 if raspbain_version == "10":
