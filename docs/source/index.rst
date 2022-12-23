@@ -6,15 +6,15 @@
 Welcome to vilib's documentation!
 =================================
 
+Vilib is a library developed by SunFounder for Raspberry Pi camera.
+
+It contains some practical functions, such as taking pictures, video recording, pose detection, face detection, motion detection, image classification and so on.
+
 .. toctree::
    :maxdepth: 2
-   :caption: Contents:
+
+   install_vilib
+   example
 
 
 
-Indices and tables
-==================
-
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
