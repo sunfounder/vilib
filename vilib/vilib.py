@@ -19,7 +19,7 @@ from multiprocessing import Process, Manager
 from flask import Flask, render_template, Response
 
 # user and user home directory
-user = os.getlogin()
+user = os.popen("echo ${SUDO_USER:-$(who -m | awk '{ print $1 }')}").readline().strip()
 user_home = os.popen('getent passwd %s | cut -d: -f 6'%user).readline().strip()
 # print(user)  # pi
 # print(user_home) # /home/pi
