@@ -257,7 +257,7 @@ def do(msg="", cmd=""):
     if status == 0 or status == None or result == "":
         print('Done')
     else:
-        print('Error')
+        print('\033[1;35mError\033[0m')
         errors.append("%s error:\n  Status:%s\n  Error:%s" %
                       (msg, status, result))
 
