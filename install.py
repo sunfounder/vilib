@@ -3,11 +3,31 @@ from distutils.log import warn
 import os, sys
 import time
 import threading
-sys.path.append('./vilib')
-from version import __version__
 
+# version
+# =================================================================
+sys.path.append('./vilib')
+user_name = os.getlogin()
+from version import __version__
+print("Start installing vilib %s for user %s"%(__version__ ,user_name))
+
+# define color print
+# =================================================================
+def warn(msg, end='\n', file=sys.stdout, flush=False):
+    print(f'\033[0;33m{msg}\033[0m', end=end, file=file, flush=flush)
+
+def error(msg, end='\n', file=sys.stdout, flush=False):
+    print(f'\033[0;31m{msg}\033[0m', end=end, file=file, flush=flush)
+
+# check if run as root
+# =================================================================
+if os.geteuid() != 0:
+    warn("Script must be run as root. Try \"sudo python3 install.py\".")
+    sys.exit(1)
+
+# global variables defined
+# =================================================================
 errors = []
-warns = []
 
 avaiable_options = ['-h', '--help', '--no-dep']
 
@@ -20,6 +40,8 @@ Options:
     -h         --help      Show this help text and exit
 '''
 
+# utils
+# =================================================================
 def run_command(cmd=""):
     import subprocess
     p = subprocess.Popen(
@@ -27,199 +49,6 @@ def run_command(cmd=""):
     result = p.stdout.read().decode('utf-8')
     status = p.poll()
     return status, result
-
-
-def check_rpi_model():
-    _, result = run_command("cat /proc/device-tree/model |awk '{print $3}'")
-    result = result.strip()
-    if result == '3':
-        return 3
-    elif result == '4':
-        return 4
-    else:
-        return None
-
-def check_raspbain_version():
-    _, result = run_command("cat /etc/debian_version|awk -F. '{print $1}'")
-    return result.strip()
-
-
-def check_python_version():
-    import sys
-    major = sys.version_info.major
-    minor = sys.version_info.minor
-    micro = sys.version_info.micro
-    return major, minor, micro
-
-
-rpi_model = check_rpi_model()
-python_version = check_python_version()
-raspbain_version = check_raspbain_version()
-
-APT_INSTALL_LIST = [ 
-    # install compilation tools
-    "cmake",
-    "gcc",
-    "g++",
-    # GTK support for GUI features, Camera support (v4l), Media Support (ffmpeg, gstreamer) etc
-    # https://docs.opencv.org/4.x/d2/de6/tutorial_py_setup_in_ubuntu.html   
-    "libavcodec-dev", 
-    "libavformat-dev ",
-    "libswscale-dev",
-    "libgstreamer-plugins-base1.0-dev", 
-    "libgstreamer1.0-dev",
-    "libgtk2.0-dev",
-    "libgtk-3-dev",
-    # update image format support library
-    "libpng-dev",
-    "libjpeg-dev",
-    "libopenexr-dev",
-    "libtiff-dev",
-    "libwebp-dev",
-    # install python3-opencv
-    # "python3-opencv", 
-    # install additional dependencies for opencv
-    "libjasper-dev",
-    # "libqtgui4", # --------
-    # "libqt4-test",
-    # install python3-picamera
-    "python3-picamera",
-    # install mediapipe-rpi3 dependency
-    "ffmpeg", 
-    "libgtk-3-0",
-    "libxcb-shm0",
-    "libcdio-paranoia-dev", 
-    "libsdl2-2.0-0", 
-    "libxv1",  
-    "libtheora0", 
-    "libva-drm2", 
-    "libva-x11-2", 
-    "libvdpau1", 
-    "libharfbuzz0b", 
-    "libbluray2", 
-    "libatlas-base-dev",
-    "libhdf5-103", 
-    "libdc1394-22", 
-    # "libopenexr23", 
-    "libzbar0",
-]
-
-
-PIP_INSTALL_LIST = [
-    "opencv-contrib-python==4.5.3.56",
-    "numpy==1.21.4", 
-    "Flask",
-    "imutils",
-    "pyzbar", # pyzbar:one-dimensional barcodes and QR codes
-    "pyzbar[scripts]",
-    "readchar", # will update setuptools to the latest version
-    "\'setuptools>59.0,<60.0\'", # The default installation location will change after setuptools version 60.0
-]
-
-if raspbain_version == "10":
-    APT_INSTALL_LIST.append("libopenexr23")
-elif raspbain_version == "11":
-    APT_INSTALL_LIST.append("libopenexr25")
-    
-    warns.append('''\033[33m
- Mediapipe is currently only supported in Raspbian Buster !
- Object detection and pose detection are not working properly !
-    \033[0m''')
-
-# select mediapipe version for raspberry pi 3 or 4
-if rpi_model == 4:
-    PIP_INSTALL_LIST.append("mediapipe-rpi4")
-else:
-    PIP_INSTALL_LIST.append("mediapipe-rpi3")
-
-
-
-# select tflite_runtime version
-# https://github.com/google-coral/pycoral/releases/
-if python_version[0] == 3:
-    if python_version[1] == 7:
-        PIP_INSTALL_LIST.append("tflite_runtime-2.1.0.post1-cp37-cp37m-linux_armv7l.whl")
-    elif python_version[1] == 8:
-        PIP_INSTALL_LIST.append("tflite_runtime-2.5.0.post1-cp38-cp38-linux_armv7l.whl")
-    elif python_version[1] == 9:
-        PIP_INSTALL_LIST.append("tflite_runtime-2.5.0.post1-cp39-cp39-linux_armv7l.whl")
-else:
-    print('[python version incompatibility] Currently only python 3.7, 3.8 and 3.9 are supported.')
-    sys.exit(1)
-
-
-
-# main function
-def install():
-
-    user_name = os.getlogin()
-
-    options = []
-    if len(sys.argv) > 1:
-        options = sys.argv[1:]
-        for opt in options:
-            if opt not in avaiable_options:
-                print("Option {} is not found.".format(opt))
-                print(usage)
-                quit()
-        if "-h" in options or "--help" in options:
-            print(usage)
-            quit()
-
-    print("Start installing vilib %s for user %s"%(__version__ ,user_name))
-    print("Python version: %s.%s.%s"%(python_version[0], python_version[1], python_version[2]))
-    print("Raspbian version: %s"%(raspbain_version))
-    print("")
-
-
-    if "--no-dep" not in options:  
-        do(msg="dpkg configure",
-            cmd='sudo dpkg --configure -a')  
-        do(msg="update apt-get",
-            cmd='sudo apt-get update -y')
-
-        print("Install dependency")
-        for dep in APT_INSTALL_LIST:
-            do(msg="install %s"%dep,
-                cmd='sudo apt-get install %s -y'%dep)
-        for dep in PIP_INSTALL_LIST:
-            do(msg="install %s"%dep,
-                cmd='sudo pip3 install %s'%dep)
-
-    print("Create workspace")
-    if not os.path.exists('/opt'):
-        os.mkdir('/opt')
-        run_command('sudo chmod 774 /opt')
-        run_command('sudo chown -R %s:%s /opt'%(user_name, user_name))
-    do(msg="create dir",
-        cmd='sudo mkdir -p /opt/vilib'
-        + ' && sudo chmod 774 /opt/vilib'
-        + ' && sudo chown -R %s:%s /opt/vilib'%(user_name, user_name)
-        )
-    do(msg="copy workspace",
-        cmd='sudo cp -r ./workspace/* /opt/vilib/'
-        + ' && sudo chmod 774 /opt/vilib/*'
-        + ' && sudo chown -R %s:%s /opt/vilib/*'%(user_name, user_name)
-        )
-    print("Install vilib python package")
-    do(msg="run setup file",
-        cmd='sudo python3 setup.py install')
-    do(msg="cleanup",
-        cmd='sudo rm -rf vilib.egg-info')
-
-    # check errors
-    if len(errors) == 0:
-        print("Finished")
-    else:
-        print("\n\nError happened in install process:")
-        for error in errors:
-            print(error)
-        print("Try to fix it yourself, or contact service@sunfounder.com with this message")
-
-    if len(warns) != 0:
-        for warn in warns:
-            print(warn)
-
 
 at_work_tip_sw = False
 def working_tip():
@@ -235,8 +64,7 @@ def working_tip():
 
     sys.stdout.write(' \033[1D')
     sys.stdout.write('\033[?25h') # cursor visible 
-    sys.stdout.flush()    
-        
+    sys.stdout.flush()  
 
 def do(msg="", cmd=""):
     print(" - %s... " % (msg), end='', flush=True)
@@ -244,7 +72,7 @@ def do(msg="", cmd=""):
     global at_work_tip_sw
     at_work_tip_sw = True
     _thread = threading.Thread(target=working_tip)
-    _thread.setDaemon(True)
+    _thread.daemon = True
     _thread.start()
     # process run
     status, result = run_command(cmd)
@@ -261,9 +89,179 @@ def do(msg="", cmd=""):
         errors.append("%s error:\n  Status:%s\n  Error:%s" %
                       (msg, status, result))
 
+def check_rpi_model():
+    _, result = run_command("cat /proc/device-tree/model |awk '{print $3}'")
+    result = result.strip()
+    if result == '3':
+        return 3
+    elif result == '4':
+        return 4
+    else:
+        return None
+
+def check_raspbain_version():
+    _, result = run_command("cat /etc/debian_version|awk -F. '{print $1}'")
+    return result.strip()
+
+def check_python_version():
+    import sys
+    major = sys.version_info.major
+    minor = sys.version_info.minor
+    micro = sys.version_info.micro
+    return major, minor, micro
+
+def check_os_bit():
+    '''
+    # import platform
+    # machine_type = platform.machine() 
+    latest bullseye uses a 64-bit kernel
+    This method is no longer applicable, the latest raspbian will uses 64-bit kernel 
+    (kernel 6.1.x) by default, "uname -m" shows "aarch64", 
+    but the system is still 32-bit.
+    '''
+    _ , os_bit = run_command("getconf LONG_BIT")
+    return int(os_bit)
+
+# print system and hardware information
+# =================================================================
+rpi_model = check_rpi_model()
+python_version = check_python_version()
+raspbain_version = check_raspbain_version()
+os_bit = check_os_bit()
+
+print(f"Python version: {python_version[0]}.{python_version[1]}.{python_version[2]}")
+print(f"Raspbian version: {raspbain_version} ({os_bit}bit)")
+print("")
+
+# Dependencies list installed with apt
+# =================================================================
+APT_INSTALL_LIST = [ 
+    # install python3-picamera2: https://datasheets.raspberrypi.com/camera/picamera2-manual.pdf
+    "python3-picamera2",
+    "python3-pyqt5",
+    "python3-opengl",
+    # install python3-opencv: # https://qengineering.eu/install-opencv-4.5-on-raspberry-64-os.html
+    "python3-opencv",
+    "opencv-data",
+    # install ffmpeg
+    "ffmpeg", 
+    # install mediapipe dependencies
+    "libgtk-3-0",
+    "libxcb-shm0",
+    "libcdio-paranoia-dev", 
+    "libsdl2-2.0-0", 
+    "libxv1",  
+    "libtheora0", 
+    "libva-drm2", 
+    "libva-x11-2", 
+    "libvdpau1", 
+    "libharfbuzz0b", 
+    "libbluray2", 
+    "libatlas-base-dev",
+    "libhdf5-103",
+    "libopenexr25",
+    "libzbar0",
+]
+
+# Dependencies list installed with pip3
+# =================================================================
+PIP_INSTALL_LIST = [
+    "tflite-runtime",
+    "Flask",
+    "imutils",
+    "pyzbar", # pyzbar:one-dimensional barcodes and QR codes
+    "pyzbar[scripts]",
+    "readchar", # will update setuptools to the latest version
+    'protobuf>=3.20.0', # mediapipe need 
+]
+
+# select mediapipe version for raspberry pi 3 or 4 on 32bit platforms
+if os_bit == 32:
+    if rpi_model == 4:
+        PIP_INSTALL_LIST.append("mediapipe-rpi4")
+    else:
+        PIP_INSTALL_LIST.append("mediapipe-rpi3")
+elif os_bit == 64:
+    PIP_INSTALL_LIST.append("mediapipe")
+
+
+# main function
+# =================================================================
+def install():
+    options = []
+    if len(sys.argv) > 1:
+        options = sys.argv[1:]
+        for opt in options:
+            if opt not in avaiable_options:
+                print("Option {} is not found.".format(opt))
+                print(usage)
+                sys.exit(0)
+        if "-h" in options or "--help" in options:
+            print(usage)
+            sys.exit(0)
+
+    print("Start installing vilib %s for user %s"%(__version__ ,user_name))
+    print("Python version: %s.%s.%s"%(python_version[0], python_version[1], python_version[2]))
+    print("Raspbian version: %s"%(raspbain_version))
+    print("")
+
+    if "--no-dep" not in options:
+        # install dependencies with apt
+        print("apt install dependency:")
+        do(msg="dpkg configure",
+            cmd='dpkg --configure -a')  
+        do(msg="update apt-get",
+            cmd='apt-get update -y')
+        for dep in APT_INSTALL_LIST:
+            do(msg=f"install {dep}",
+                cmd=f'apt-get install {dep} -y')
+        # install dependencies with pip
+        print("pip3 install dependency:")
+        for dep in PIP_INSTALL_LIST:
+            if dep.endswith('.whl'):
+                dep_name = dep.split("/")[-1]
+            else:
+                dep_name = dep
+            do(msg=f"install {dep_name}",
+                cmd=f'pip3 install {dep}')
+
+    print("Create workspace")
+    if not os.path.exists('/opt'):
+        os.mkdir('/opt')
+        run_command('chmod 774 /opt')
+        run_command(f'chown -R {user_name}:{user_name} /opt')
+    do(msg="create dir",
+        cmd='mkdir -p /opt/vilib'
+        + ' && chmod 774 /opt/vilib'
+        + f' && chown -R {user_name}:{user_name} /opt/vilib'
+        )
+    do(msg="copy workspace",
+        cmd='cp -r ./workspace/* /opt/vilib/'
+        + ' && chmod 774 /opt/vilib/*'
+        + f' && chown -R {user_name}:{user_name} /opt/vilib/*'
+        )
+    print("Install vilib python package")
+    do(msg="run setup file",
+        cmd='python3 setup.py install')
+    do(msg="cleanup",
+        cmd='rm -rf vilib.egg-info')
+
+    # check errors
+    if len(errors) == 0:
+        print("Finished")
+    else:
+        print("\n\nError happened in install process:")
+        for error in errors:
+            print(error)
+        print("Try to fix it yourself, or contact service@sunfounder.com with this message")
+
 
 if __name__ == "__main__":
     try:
         install()
     except KeyboardInterrupt:
-        print("Canceled.")
+        print("\n\nCanceled.")
+    finally:
+        sys.stdout.write(' \033[1D')
+        sys.stdout.write('\033[?25h') # cursor visible 
+        sys.stdout.flush()
