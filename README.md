@@ -1,7 +1,10 @@
 
 # vilib -- Vision Library for Raspberry Pi
 
-Quick Links:
+## Documentation
+https://docs.sunfounder.com/projects/vilib-rpi/en/latest/index.html
+
+## Quick Links:
 
 - [vilib](#vilib)
   - [Preface](#preface)
@@ -27,7 +30,7 @@ Download this repository to your Raspberry Pi:
 
 ```shell
 cd ~
-git clone https://github.com/sunfounder/vilib.git
+git clone -b picamera2 https://github.com/sunfounder/vilib.git
 ```
 ## Install
 ```shell
