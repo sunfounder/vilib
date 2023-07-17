@@ -1,14 +1,23 @@
 #!/usr/bin/env python3
+
+# whther print welcome message
+import os
+from .version import __version__
+if 'VILIB_WELCOME' not in os.environ or os.environ['VILIB_WELCOME'] not in  ['False', '0']:
+    from pkg_resources import require
+    picamera_version = require('picamera')[0].version
+    print(f'vilib {__version__} launching ...')
+    print(f'picamera {picamera_version}')
+
 import os
 import time
 import datetime
 
-print('Launching ...')
 import cv2
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
-from picamera.array import PiRGBArray
-from picamera import PiCamera
+from picamera2 import Picamera2
+import libcamera
 
 import tflite_runtime.interpreter as tflite
 from pyzbar import pyzbar
@@ -564,25 +573,20 @@ class Vilib(object):
     def camera():
         global effect
         flask_thread = None
-        camera = PiCamera()
-        camera.resolution = (640, 480)
-        camera.image_effect = EFFECTS[Vilib.detect_obj_parameter['eff']]
-        camera.framerate = 24
-        camera.rotation = 0
-        # camera.rotation = 180   
-        camera.brightness = 50    #(0 to 100)
-        camera.sharpness = 0      #(-100 to 100)
-        camera.contrast = 0       #(-100 to 100)
-        camera.saturation = 0     #(-100 to 100)
-        camera.iso = 0            #(automatic)(100 to 800)
-        camera.exposure_compensation = 0   #(-25 to 25)
-        camera.exposure_mode = 'auto'
-        camera.meter_mode = 'average'
-        camera.awb_mode = 'auto'
-        camera.hflip = Vilib.detect_obj_parameter['camera_hflip']
-        camera.vflip = Vilib.detect_obj_parameter['camera_vflip']
-        camera.crop = (0.0, 0.0, 1.0, 1.0)
-        rawCapture = PiRGBArray(camera, size=camera.resolution)  
+
+        picam2 = Picamera2()
+        preview_config = picam2.preview_configuration
+        preview_config.size = (640, 480)
+        preview_config.format = 'RGB888'  # 'XRGB8888', 'XBGR8888', 'RGB888', 'BGR888', 'YUV420'
+        hflip = Vilib.detect_obj_parameter['camera_hflip']
+        vflip = Vilib.detect_obj_parameter['camera_vflip']
+        preview_config.transform = libcamera.Transform(hflip=hflip, vflip=vflip)
+        preview_config.colour_space = libcamera.ColorSpace.Sycc()
+        preview_config.buffer_count = 4
+        preview_config.queue = True
+ 
+        picam2.start()
+
         last_e ='none'
         camera_val = 0
         last_show_content_list = []
@@ -596,139 +600,121 @@ class Vilib(object):
         # 
         try:
             while True:
-                for frame in camera.capture_continuous(rawCapture, format="bgr",use_video_port=True):# use_video_port=True
-                    
-                    start_time = time.time()
-                    img = frame.array
+                start_time = time.time()
+                img = picam2.capture_array()
 
-                    img = Vilib.gesture_calibrate(img)
-                    img = Vilib.traffic_detect(img)
-                    img = Vilib.color_detect_func(img)
-                    img = Vilib.human_detect_func(img)
-                    img = Vilib.gesture_recognition(img)
-                    img = Vilib.qrcode_detect_func(img)
-                    # img = Vilib.face_detect_func(img)
-                    # img = Vilib.face_recognition_func(img)
-                    img = Vilib.object_detect_fuc(img) 
-                    img = Vilib.image_classify_fuc(img)
-                    img = Vilib.hands_detect_fuc(img)
-                    img = Vilib.pose_detect_fuc(img)
+                img = Vilib.gesture_calibrate(img)
+                img = Vilib.traffic_detect(img)
+                img = Vilib.color_detect_func(img)
+                img = Vilib.human_detect_func(img)
+                img = Vilib.gesture_recognition(img)
+                img = Vilib.qrcode_detect_func(img)
+                # img = Vilib.face_detect_func(img)
+                # img = Vilib.face_recognition_func(img)
+                img = Vilib.object_detect_fuc(img) 
+                img = Vilib.image_classify_fuc(img)
+                img = Vilib.hands_detect_fuc(img)
+                img = Vilib.pose_detect_fuc(img)
 
-                    # change_camera_setting
-                    if Vilib.detect_obj_parameter['change_setting_flag'] == True:
-                        Vilib.detect_obj_parameter['change_setting_flag'] = False
-
-                        change_setting_cmd = "camera." + Vilib.detect_obj_parameter['change_setting_type'] + '=' + str(Vilib.detect_obj_parameter['change_setting_val'])
-                        print(change_setting_cmd)
-                        exec(change_setting_cmd)
-
-                        change_type_dict[Vilib.detect_obj_parameter['change_setting_type']] = Vilib.detect_obj_parameter['change_setting_val']
-                    if Vilib.detect_obj_parameter['content_num'] != 0:
-
-                        for i in range(Vilib.detect_obj_parameter['content_num']):
-                            exec("Vilib.detect_obj_parameter['process_si'] = Vilib.detect_obj_parameter['process_content_" + str(i+1) + "'" + "]")
-                            cv2.putText(img, str(Vilib.detect_obj_parameter['process_si'][0]),Vilib.detect_obj_parameter['process_si'][1],cv2.FONT_HERSHEY_SIMPLEX,Vilib.detect_obj_parameter['process_si'][3],Vilib.detect_obj_parameter['process_si'][2],2)
-                    
-                    if Vilib.detect_obj_parameter['setting_flag'] == True:
-                        setting_type = Camera_SETTING[Vilib.detect_obj_parameter['setting']]
-                        if setting_type == "resolution":
-                            Vilib.detect_obj_parameter['setting_val'] = Vilib.detect_obj_parameter['setting_resolution']
-
-                            change_type_dict["resolution"] = list(Vilib.detect_obj_parameter['setting_resolution'])
-                            cv2.putText(img, 'resolution:' + str(Vilib.detect_obj_parameter['setting_resolution']),(10,20),cv2.FONT_HERSHEY_SIMPLEX,0.6,(255,255,255),2)
-                        elif setting_type == "shutter_speed":
-                            change_type_dict["shutter_speed"] = Vilib.detect_obj_parameter['change_setting_val']
-                            cv2.putText(img, 'shutter_speed:' + str(Vilib.detect_obj_parameter['change_setting_val']),(10,20),cv2.FONT_HERSHEY_SIMPLEX,0.6,(255,255,255),2)
-                        else:
-                            cmd_text = "Vilib.detect_obj_parameter['setting_val'] = camera." + Camera_SETTING[Vilib.detect_obj_parameter['setting']]
-                            # print('mennu:',Ras_Cam.detect_obj_parameter['setting_val'])
-                            exec(cmd_text)
-                            cv2.putText(img, setting_type + ': ' + str(Vilib.detect_obj_parameter['setting_val']),(10,20),cv2.FONT_HERSHEY_SIMPLEX,0.6,(255,255,255),2)
+                # change_camera_setting
+                if Vilib.detect_obj_parameter['change_setting_flag'] == True:
+                    Vilib.detect_obj_parameter['change_setting_flag'] = False
+                    change_setting_cmd = "camera." + Vilib.detect_obj_parameter['change_setting_type'] + '=' + str(Vilib.detect_obj_parameter['change_setting_val'])
+                    print(change_setting_cmd)
+                    exec(change_setting_cmd)
+                    change_type_dict[Vilib.detect_obj_parameter['change_setting_type']] = Vilib.detect_obj_parameter['change_setting_val']
+                if Vilib.detect_obj_parameter['content_num'] != 0:
+                    for i in range(Vilib.detect_obj_parameter['content_num']):
+                        exec("Vilib.detect_obj_parameter['process_si'] = Vilib.detect_obj_parameter['process_content_" + str(i+1) + "'" + "]")
+                        cv2.putText(img, str(Vilib.detect_obj_parameter['process_si'][0]),Vilib.detect_obj_parameter['process_si'][1],cv2.FONT_HERSHEY_SIMPLEX,Vilib.detect_obj_parameter['process_si'][3],Vilib.detect_obj_parameter['process_si'][2],2)
+                if Vilib.detect_obj_parameter['setting_flag'] == True:
+                    setting_type = Camera_SETTING[Vilib.detect_obj_parameter['setting']]
+                    if setting_type == "resolution":
+                        Vilib.detect_obj_parameter['setting_val'] = Vilib.detect_obj_parameter['setting_resolution']
+                        change_type_dict["resolution"] = list(Vilib.detect_obj_parameter['setting_resolution'])
+                        cv2.putText(img, 'resolution:' + str(Vilib.detect_obj_parameter['setting_resolution']),(10,20),cv2.FONT_HERSHEY_SIMPLEX,0.6,(255,255,255),2)
+                    elif setting_type == "shutter_speed":
+                        change_type_dict["shutter_speed"] = Vilib.detect_obj_parameter['change_setting_val']
+                        cv2.putText(img, 'shutter_speed:' + str(Vilib.detect_obj_parameter['change_setting_val']),(10,20),cv2.FONT_HERSHEY_SIMPLEX,0.6,(255,255,255),2)
+                    else:
+                        cmd_text = "Vilib.detect_obj_parameter['setting_val'] = camera." + Camera_SETTING[Vilib.detect_obj_parameter['setting']]
+                        # print('mennu:',Ras_Cam.detect_obj_parameter['setting_val'])
+                        exec(cmd_text)
+                        cv2.putText(img, setting_type + ': ' + str(Vilib.detect_obj_parameter['setting_val']),(10,20),cv2.FONT_HERSHEY_SIMPLEX,0.6,(255,255,255),2)
 
 
-                    e = EFFECTS[Vilib.detect_obj_parameter['eff']]
-                    
-                    
-                    if last_e != e:
-                        camera.image_effect = e
+                e = EFFECTS[Vilib.detect_obj_parameter['eff']]
+                if last_e != e:
                     last_e = e
-                    if last_e != 'none':
-                        cv2.putText(img, str(last_e),(0,15),cv2.FONT_HERSHEY_SIMPLEX,0.6,(204,209,72),2)
+                last_e = e
+                if last_e != 'none':
+                    cv2.putText(img, str(last_e),(0,15),cv2.FONT_HERSHEY_SIMPLEX,0.6,(204,209,72),2)
 
-                        
-                    if Vilib.detect_obj_parameter['photo_button_flag'] == True:
-                        camera.close()
-                        break
-                     
-                    if  Vilib.detect_obj_parameter['imshow_flag'] == True:
-                        try:      
-                            cv2.imshow("Picamera",img)
-                            cv2.waitKey(1) # 1 ms
-                            if cv2.getWindowProperty('Picamera', cv2.WND_PROP_VISIBLE) == 0:
-                                # cv2.destroyAllWindows()
-                                cv2.destroyWindow('Picamera')
-                                Vilib.detect_obj_parameter['imshow_flag'] = False
-                                Vilib.detect_obj_parameter['camera_start_flag'] = False
-                        except Exception as e: 
-                            print(e)
-                            print('imshow faileed, maybe this environment does not have "display" ')
+                if Vilib.detect_obj_parameter['photo_button_flag'] == True:
+                    picam2.close()
+                    break
+                    
+                if  Vilib.detect_obj_parameter['imshow_flag'] == True:
+                    try:      
+                        cv2.imshow("Picamera",img)
+                        cv2.waitKey(1) # 1 ms
+                        if cv2.getWindowProperty('Picamera', cv2.WND_PROP_VISIBLE) == 0:
+                            # cv2.destroyAllWindows()
+                            cv2.destroyWindow('Picamera')
+                            Vilib.detect_obj_parameter['imshow_flag'] = False
+                            Vilib.detect_obj_parameter['camera_start_flag'] = False
+                    except Exception as e: 
+                        print(e)
+                        print('imshow faileed, maybe this environment does not have "display" ')
 
-                    if Vilib.detect_obj_parameter['camera_start_flag'] == False:
-                        break    
+                if Vilib.detect_obj_parameter['camera_start_flag'] == False:
+                    break    
 
-                    # web_display
-                    if Vilib.detect_obj_parameter['web_display_flag'] == True:
-                        if flask_thread == None or flask_thread.is_alive() == False:
-                            print('Starting network video streaming ...')
-                            wlan0,eth0 = getIP()
-                            if wlan0 != None:
-                                ip = wlan0     
-                            else:
-                                ip = eth0
-                            print('\nRunning on: http://%s:9000/mjpg\n'%ip)
-                            flask_thread = threading.Thread(name='flask_thread',target=web_camera_start)
-                            flask_thread.setDaemon(True)
-                            flask_thread.start()
-                    elif Vilib.detect_obj_parameter['web_display_flag'] == False:
-                        if flask_thread != None and flask_thread.is_alive():
-                            flask_thread.join(timeout=0.2)
+                # web_display
+                if Vilib.detect_obj_parameter['web_display_flag'] == True:
+                    if flask_thread == None or flask_thread.is_alive() == False:
+                        print('Starting network video streaming ...')
+                        wlan0,eth0 = getIP()
+                        if wlan0 != None:
+                            ip = wlan0     
+                        else:
+                            ip = eth0
+                        print('\nRunning on: http://%s:9000/mjpg\n'%ip)
+                        flask_thread = threading.Thread(name='flask_thread',target=web_camera_start)
+                        flask_thread.setDaemon(True)
+                        flask_thread.start()
+                elif Vilib.detect_obj_parameter['web_display_flag'] == False:
+                    if flask_thread != None and flask_thread.is_alive():
+                        flask_thread.join(timeout=0.2)
 
-                    Vilib.img_array[0] = img
-                    rawCapture.truncate(0)
-                    end_time = time.time()
-                    end_time = end_time - start_time
+                Vilib.img_array[0] = img
+                end_time = time.time()
+                end_time = end_time - start_time
 
                 if Vilib.detect_obj_parameter['camera_start_flag'] == False:
                     break
 
-                # picture_time = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
-                # Vilib.detect_obj_parameter['picture_path'] = Default_Pictures_Path + picture_time + '.jpg'
 
-                # a_t = "sudo raspistill -t 250  -w 2592 -h 1944 -vf  -rot %s -ifx %s -o %s " %( 
-                #     str(change_type_dict['rotation']),
-                #     str(EFFECTS[Vilib.detect_obj_parameter['eff']]),
-                #     Vilib.detect_obj_parameter['picture_path'],
-                #     ) 
-                # run_command(a_t)
+            #init again
+            picam2 = Picamera2()
+            preview_config = picam2.preview_configuration
+            preview_config.size = (640, 480)
+            preview_config.format = 'XRGB8888'  # 'XRGB8888', 'XBGR8888', 'RGB888', 'BGR888', 'YUV420'
+            hflip = Vilib.detect_obj_parameter['camera_hflip']
+            vflip = Vilib.detect_obj_parameter['camera_vflip']
+            preview_config.transform = libcamera.Transform(hflip=hflip, vflip=vflip)
+            preview_config.colour_space = libcamera.ColorSpace.Sycc()
+            preview_config.buffer_count = 4
+            preview_config.queue = True
 
-                # if Vilib.detect_obj_parameter['watermark_flag'] == True:
-                #     add_text_to_image(Vilib.detect_obj_parameter['picture_path'],Vilib.detect_obj_parameter['watermark'])
-
-                #init again
-                camera = PiCamera()
-                camera.resolution = (640,480)
-                camera.hflip = Vilib.detect_obj_parameter['camera_hflip']
-                camera.vflip = Vilib.detect_obj_parameter['camera_vflip']
-                # camera.rotation = Vilib.detect_obj_parameter['camera_rot']
-                camera.image_effect = e
-                rawCapture = PiRGBArray(camera, size=camera.resolution) 
-                Vilib.detect_obj_parameter['photo_button_flag'] = False
+            picam2.start()
+            Vilib.detect_obj_parameter['photo_button_flag'] = False
 
         except KeyboardInterrupt:
             pass       
         finally:
             print('camera close')
-            camera.close()
+            picam2.close()
             cv2.destroyAllWindows()
 
 # 手势校准接口
