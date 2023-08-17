@@ -1,4 +1,11 @@
 #!/usr/bin/env python3
+
+# check platform
+import sys
+if sys.version_info.major != 3 or sys.version_info.minor != 7:
+    raise RuntimeError('\033[33m mediapipe is only supported in py37 on 32bit system, \
+or py38, py39, py310, py311 on 64bit system.\033[m')
+
 import cv2
 import mediapipe as mp
 from ast import literal_eval
