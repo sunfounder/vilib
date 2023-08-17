@@ -1,35 +1,59 @@
-
 # vilib -- Vision Library for Raspberry Pi
+Image visual processing library for Raspberry Pi. It is developed based on opencv, picamera, tflite, mediapipe, pyzbar. Integrate multiple functions such as color recognition, face recognition, hands detection, image_classification, objects_detection, Wireless video transmission, etc...
+</br>
+</br>
+
+If you want to use the new version of Raspberry Pi camera driver libcamera, please switch to the picamera2 branch:
+  
+  https://github.com/sunfounder/vilib/tree/picamera2
 
 Quick Links:
+- [Documentions](#documentions)
+- [Compatibility](#compatibility)
+- [Install](#install)
+- [Usage](#usage)
+- [ChangeLog](#changelog)
+- [About SunFounder](#about-sunfounder)
+- [License](#license)
+- [Contact us](#contact-us)
 
-- [vilib](#vilib)
-  - [Preface](#preface)
-  - [About vilib:](#about-vilib)
-  - [Download](#download)
-  - [Install](#install)
-  - [Usage](#usage)
-  - [Update](#update)
-  - [About SunFounder](#about-sunfounder)
-  - [License](#license)
-  - [Contact us](#contact-us)
+## Documentions
+- vilib API
 
-## Preface
+  https://docs.sunfounder.com/projects/vilib-rpi/en/latest/
 
-We are happy to see your issus and pull request. Feel free to be apart.
+- Reference Link
 
-## About vilib
-Image visual processing library with multiple functions such as color recognition, face recognition, hands detection, image_classification, objects_detection, Wireless video transmission, etc...
+  Picamera : https://picamera.readthedocs.io/en/latest/index.html
 
-## Download
+  TFLite ：https://www.tensorflow.org/lite/examples
 
-Download this repository to your Raspberry Pi:
+  Mediapipe : https://mediapipe-studio.webapps.google.com/home, https://github.com/google/mediapipe
 
+
+## Compatibility
+
+  | fuction |python version |os bit |
+  | :---: | :---: | :---: |
+  | web display (flask)| py37, py38, py39 | 32-bit
+  | color detection (opencv) | py37, py38, py39 | 32-bit
+  | face detection (opencv)| py37, py38, py39 | 32-bit
+  | image classification (tflite)| py37, py38, py39 | 32-bit
+  | objects detection (tflite)| py37, py38, py39 | 32-bit
+  | qrcode detection (pyzbar)| py37, py38, py39 | 32-bit
+  | take photo (opencv)| py37, py38, py39 | 32-bit
+  | record video (opencv)| py37, py38, py39 | 32-bit
+  | hands detection (mediapipe)| py37 | 32-bit
+  | pose detection (mediapipe)| py37 | 32-bit
+  | others | - | - |
+
+## Install
+- clone code 
 ```shell
 cd ~
 git clone https://github.com/sunfounder/vilib.git
 ```
-## Install
+- install
 ```shell
 cd ~/vilib
 sudo python3 install.py 
@@ -43,7 +67,7 @@ sudo python3 xxx.py
 
 Stop running the example by using <kbd>Ctrl</kbd>+<kbd>C</kbd>
 
-## Update
+## ChangeLog
 
 - [CHANGELOG]
 
