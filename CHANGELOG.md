@@ -1,5 +1,14 @@
 # Change Log 
 
+## [0.0.6] - 2023-8-16
+
+### Fixed
+- Fix problem of installation failure, and optimize the install script.
+
+### Added
+- Add checking platform when import mediapipe
+
+
 ## [0.0.4] - 2022-5-19
 
 ### Fixed
