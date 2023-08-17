@@ -3,7 +3,10 @@ import os
 import time
 import datetime
 
-print('Launching ...')
+from .version import __version__
+
+print(f'Launching villib {__version__} ...')
+
 import cv2
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
