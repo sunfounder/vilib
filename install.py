@@ -276,6 +276,9 @@ def install():
             do(msg=f"install {dep}",
                 cmd=f'pip3 install {dep}')
 
+        if is_compatible_mediapipe == False:
+            print('\033[1;33m-mediapipe is not supported on this platform... Skip \033[0m')
+
     print("Create workspace")
     if not os.path.exists('/opt'):
         os.mkdir('/opt')
