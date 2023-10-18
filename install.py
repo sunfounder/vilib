@@ -80,7 +80,7 @@ def do(msg="", cmd=""):
     # at_work_tip stop
     at_work_tip_sw = False
     while _thread.is_alive():
-        time.sleep(0.1)
+        time.sleep(0.01)
     # status
     if status == 0 or status == None or result == "":
         print('Done')
@@ -176,13 +176,19 @@ PIP_INSTALL_LIST = [
 ]
 
 # select mediapipe version for raspberry pi 3 or 4 on 32bit platforms
-if os_bit == 32:
+is_mediapipe_supported = False
+
+if os_bit == 32 and raspbain_version == 10:
+    is_mediapipe_supported = True
     if rpi_model == 4:
         PIP_INSTALL_LIST.append("mediapipe-rpi4")
     else:
         PIP_INSTALL_LIST.append("mediapipe-rpi3")
-elif os_bit == 64:
+elif os_bit == 64 and raspbain_version >= 11:
+    is_mediapipe_supported = True
     PIP_INSTALL_LIST.append("mediapipe")
+else:
+    is_mediapipe_supported = False
 
 
 # main function
@@ -224,6 +230,8 @@ def install():
                 dep_name = dep
             do(msg=f"install {dep_name}",
                 cmd=f'pip3 install {dep}')
+        if is_mediapipe_supported == False:
+            print('\033[1;33m mediapipe is not supported on this platform... Skip \033[0m')
 
     print("Create workspace")
     if not os.path.exists('/opt'):
