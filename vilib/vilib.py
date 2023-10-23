@@ -5,9 +5,9 @@ import os
 from .version import __version__
 if 'VILIB_WELCOME' not in os.environ or os.environ['VILIB_WELCOME'] not in  ['False', '0']:
     from pkg_resources import require
-    picamera_version = require('picamera')[0].version
+    picamera2_version = require('picamera2')[0].version
     print(f'vilib {__version__} launching ...')
-    print(f'picamera {picamera_version}')
+    print(f'picamera2 {picamera2_version}')
 
 import os
 import time
