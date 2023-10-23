@@ -93,21 +93,21 @@ def check_rpi_model():
     _, result = run_command("cat /proc/device-tree/model |awk '{print $3}'")
     result = result.strip()
     if result == '3':
-        return 3
+        return int(3)
     elif result == '4':
-        return 4
+        return int(4)
     else:
         return None
 
 def check_raspbain_version():
     _, result = run_command("cat /etc/debian_version|awk -F. '{print $1}'")
-    return result.strip()
+    return int(result.strip())
 
 def check_python_version():
     import sys
-    major = sys.version_info.major
-    minor = sys.version_info.minor
-    micro = sys.version_info.micro
+    major = int(sys.version_info.major)
+    minor = int(sys.version_info.minor)
+    micro = int(sys.version_info.micro)
     return major, minor, micro
 
 def check_os_bit():
