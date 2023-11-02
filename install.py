@@ -133,6 +133,13 @@ print(f"Python version: {python_version[0]}.{python_version[1]}.{python_version[
 print(f"Raspbian version: {raspbain_version} ({os_bit}bit)")
 print("")
 
+# check system
+# =================================================================
+if raspbain_version <= 10:
+    warn('System not be supported.Requires system in bullseye(11) or newer.')
+    print('Please use newer system or use "legacy" branch.')
+    sys.exit(1)
+
 # Dependencies list installed with apt
 # =================================================================
 APT_INSTALL_LIST = [ 
@@ -159,7 +166,7 @@ APT_INSTALL_LIST = [
     "libbluray2", 
     "libatlas-base-dev",
     "libhdf5-103",
-    "libopenexr25",
+    # "libopenexr25",
     "libzbar0",
 ]
 
@@ -175,21 +182,14 @@ PIP_INSTALL_LIST = [
     'protobuf>=3.20.0', # mediapipe need 
 ]
 
-# select mediapipe version for raspberry pi 3 or 4 on 32bit platforms
+# check whether mediapipe is supported
 is_mediapipe_supported = False
-
-if os_bit == 32 and raspbain_version == 10:
-    is_mediapipe_supported = True
-    if rpi_model == 4:
-        PIP_INSTALL_LIST.append("mediapipe-rpi4")
-    else:
-        PIP_INSTALL_LIST.append("mediapipe-rpi3")
-elif os_bit == 64 and raspbain_version >= 11:
+if os_bit == 64 and raspbain_version >= 11:
     is_mediapipe_supported = True
     PIP_INSTALL_LIST.append("mediapipe")
 else:
     is_mediapipe_supported = False
-
+    warn("mediapipe is only supported on 64bit system.")
 
 # main function
 # =================================================================
@@ -206,13 +206,9 @@ def install():
             print(usage)
             sys.exit(0)
 
-    print("Start installing vilib %s for user %s"%(__version__ ,user_name))
-    print("Python version: %s.%s.%s"%(python_version[0], python_version[1], python_version[2]))
-    print("Raspbian version: %s"%(raspbain_version))
-    print("")
-
     if "--no-dep" not in options:
         # install dependencies with apt
+        # ===================================
         print("apt install dependency:")
         do(msg="dpkg configure",
             cmd='dpkg --configure -a')  
@@ -221,19 +217,33 @@ def install():
         for dep in APT_INSTALL_LIST:
             do(msg=f"install {dep}",
                 cmd=f'apt-get install {dep} -y')
+
         # install dependencies with pip
+        # ===================================
         print("pip3 install dependency:")
+        # check whether pip has the option "--break-system-packages"
+        _is_bsps = ''
+        status, _ = run_command("pip3 help install|grep break-system-packages")
+        if status == 0: # if true
+            _is_bsps = "--break-system-packages"
+            print("\033[38;5;8m pip3 install with --break-system-packages\033[0m")
+        # update pip
+        do(msg="update pip3",
+            cmd=f'python3 -m pip install --upgrade pip {_is_bsps}'
+        )
         for dep in PIP_INSTALL_LIST:
             if dep.endswith('.whl'):
                 dep_name = dep.split("/")[-1]
             else:
                 dep_name = dep
             do(msg=f"install {dep_name}",
-                cmd=f'pip3 install {dep}')
+                cmd=f'pip3 install {dep} {_is_bsps}')
+        #
         if is_mediapipe_supported == False:
             print('\033[1;33m mediapipe is not supported on this platform... Skip \033[0m')
 
     print("Create workspace")
+    # ===================================
     if not os.path.exists('/opt'):
         os.mkdir('/opt')
         run_command('chmod 774 /opt')
