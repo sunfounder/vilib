@@ -108,7 +108,8 @@ objects_detection_labels = '/opt/vilib/coco_labels.txt'
 # endregion : parameter definition
 
 # region Main : flask
-os.environ['FLASK_ENV'] =  'development'
+# os.environ['FLASK_ENV'] =  'development'
+os.environ['FLASK_DEBUG'] =  'development'
 app = Flask(__name__)
 
 @app.route('/')
@@ -231,8 +232,6 @@ def add_text_to_image(name, text_1):
     image_draw.text(time_xy, time_text, font=time_font(image_target.size[0]), fill=(255, 255, 255))
     image_draw.text(company_xy, text_1, font=text_font(image_target.size[0]), fill=(255, 255, 255))
     image_target.save(name,quality=95,subsampling=0)# 
-
-
 
 
 class Vilib(object): 
@@ -576,6 +575,7 @@ class Vilib(object):
 
         picam2 = Picamera2()
         preview_config = picam2.preview_configuration
+        # preview_config.size = (800, 600)
         preview_config.size = (640, 480)
         preview_config.format = 'RGB888'  # 'XRGB8888', 'XBGR8888', 'RGB888', 'BGR888', 'YUV420'
         hflip = Vilib.detect_obj_parameter['camera_hflip']
@@ -584,8 +584,15 @@ class Vilib(object):
         preview_config.colour_space = libcamera.ColorSpace.Sycc()
         preview_config.buffer_count = 4
         preview_config.queue = True
- 
-        picam2.start()
+
+        try:
+            picam2.start()
+        except Exception as e:
+            print(f"\033[38;5;1mError:\033[0m\n{e}")
+            print("\nPlease check whether the camera is connected well,  \
+and disable the \"legacy camera driver\" on raspi-config")
+            import sys
+            sys.exit(1)
 
         last_e ='none'
         camera_val = 0
