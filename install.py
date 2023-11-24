@@ -99,9 +99,23 @@ def check_rpi_model():
     else:
         return None
 
+def check_os_id():
+    import platform
+    result = platform.freedesktop_os_release()["ID"]
+    return result
+
+def check_os_version():
+    import platform
+    result = platform.freedesktop_os_release()["VERSION_ID"]
+    return result
+
 def check_raspbain_version():
     _, result = run_command("cat /etc/debian_version|awk -F. '{print $1}'")
-    return int(result.strip())
+    try:
+        os_version = int(result.strip())
+    except:
+        os_version = None
+    return os_version
 
 def check_python_version():
     import sys
@@ -125,20 +139,34 @@ def check_os_bit():
 # print system and hardware information
 # =================================================================
 rpi_model = check_rpi_model()
+os_id = check_os_id()
+os_version = check_os_version()
 python_version = check_python_version()
 raspbain_version = check_raspbain_version()
 os_bit = check_os_bit()
 
 print(f"Python version: {python_version[0]}.{python_version[1]}.{python_version[2]}")
-print(f"Raspbian version: {raspbain_version} ({os_bit}bit)")
+print(f"OS version: {os_id} {os_version} ({os_bit}bit)")
 print("")
 
 # check system
 # =================================================================
-if raspbain_version <= 10:
-    warn('System not be supported.Requires system in bullseye(11) or newer.')
-    print('Please use newer system or use "legacy" branch.')
-    sys.exit(1)
+is_system_supported = False
+if os_id == 'raspbian' or os_id == 'debian':
+    if raspbain_version >= 10:
+        is_system_supported = True
+    else:
+        is_system_supported = False
+elif os_id == 'ubuntu':
+    if float(os_version) >= 23.1:
+        is_system_supported = True
+    else:
+        is_system_supported = False
+
+if not is_system_supported:
+        warn('System not be supported.Requires system in bullseye(11) or Ubuntu(23.10) or newer.')
+        print('Please use newer system or use "legacy" branch.')
+        sys.exit(1)
 
 # Dependencies list installed with apt
 # =================================================================
@@ -184,7 +212,7 @@ PIP_INSTALL_LIST = [
 
 # check whether mediapipe is supported
 is_mediapipe_supported = False
-if os_bit == 64 and raspbain_version >= 11:
+if os_bit == 64:
     is_mediapipe_supported = True
     PIP_INSTALL_LIST.append("mediapipe")
 else:
