@@ -10,6 +10,15 @@ def main():
     print('\npress Ctrl+C to exit')
     
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+        while True:
+            pass
+    except KeyboardInterrupt:
+        pass
+    except Exception as e:
+        print(f"\033[31mERROR: {e}\033[m")
+    finally:
+        Vilib.camera_close()
 
 
