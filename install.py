@@ -143,6 +143,7 @@ if raspbain_version <= 10:
 # Dependencies list installed with apt
 # =================================================================
 APT_INSTALL_LIST = [ 
+    "python3-libcamera",
     # install python3-picamera2: https://datasheets.raspberrypi.com/camera/picamera2-manual.pdf
     "python3-picamera2",
     "python3-pyqt5",
@@ -168,6 +169,7 @@ APT_INSTALL_LIST = [
     "libhdf5-103",
     # "libopenexr25",
     "libzbar0",
+    "libopenblas-dev",
 ]
 
 # Dependencies list installed with pip3
