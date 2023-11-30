@@ -701,22 +701,6 @@ and disable the \"legacy camera driver\" on raspi-config")
                 if Vilib.detect_obj_parameter['camera_start_flag'] == False:
                     break
 
-
-            #init again
-            picam2 = Picamera2()
-            preview_config = picam2.preview_configuration
-            preview_config.size = (640, 480)
-            preview_config.format = 'XRGB8888'  # 'XRGB8888', 'XBGR8888', 'RGB888', 'BGR888', 'YUV420'
-            hflip = Vilib.detect_obj_parameter['camera_hflip']
-            vflip = Vilib.detect_obj_parameter['camera_vflip']
-            preview_config.transform = libcamera.Transform(hflip=hflip, vflip=vflip)
-            preview_config.colour_space = libcamera.ColorSpace.Sycc()
-            preview_config.buffer_count = 4
-            preview_config.queue = True
-
-            picam2.start()
-            Vilib.detect_obj_parameter['photo_button_flag'] = False
-
         except KeyboardInterrupt:
             pass       
         finally:
@@ -1222,6 +1206,7 @@ and disable the \"legacy camera driver\" on raspi-config")
         Vilib.detect_obj_parameter['camera_hflip'] = hflip       
         Vilib.detect_obj_parameter['camera_start_flag'] = True
         Vilib.camera_thread = threading.Thread(target=Vilib.camera_clone, name="camera_satrt")
+        Vilib.camera_thread.daemon = False
         Vilib.camera_thread.start()
 
 # 关闭摄像头
