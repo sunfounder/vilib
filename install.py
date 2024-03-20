@@ -242,7 +242,7 @@ def install():
                 cmd=f'pip3 install {dep} {_is_bsps}')
         #
         if is_mediapipe_supported == False:
-            print('\033[1;33m mediapipe is not supported on this platform... Skip \033[0m')
+            print('\033[38;5;8m  mediapipe is not supported on this platform... Skip \033[0m')
 
     print("Create workspace")
     # ===================================
