@@ -62,5 +62,13 @@ def main():
         sleep(0.1)
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except KeyboardInterrupt:
+        pass
+    except Exception as e:
+        print(f"\033[31mERROR: {e}\033[m")
+    finally:
+        Vilib.camera_close()
+
 
