@@ -1,42 +1,40 @@
 
 # vilib -- Vision Library for Raspberry Pi
 
-## Documentation
-
-<https://docs.sunfounder.com/projects/vilib-rpi/en/latest/index.html>
+Image visual processing library with multiple functions such as color recognition, face recognition, hands detection, image_classification, objects_detection, Wireless video transmission, etc...
 
 ## Quick Links
 
-- [vilib](#vilib)
-  - [Preface](#preface)
-  - [About vilib:](#about-vilib)
-  - [Download](#download)
-  - [Install](#install)
-  - [Usage](#usage)
-  - [Update](#update)
-  - [About SunFounder](#about-sunfounder)
-  - [Contact us](#contact-us)
+- [Links](#links)
+- [Install](#install)
+- [Usage](#usage)
+- [Update](#update)
+- [About SunFounder](#about-sunfounder)
+- [Contact us](#contact-us)
 
-## Preface
+## Docs
 
-We are happy to see your issus and pull request. Feel free to be apart.
+<https://docs.sunfounder.com/projects/vilib-rpi/en/latest/index.html>
 
-## About vilib
+## Links
 
-Image visual processing library with multiple functions such as color recognition, face recognition, hands detection, image_classification, objects_detection, Wireless video transmission, etc...
+- our official website: <http://www.sunfounder.com>
+- picamera2: <https://github.com/raspberrypi/picamera2>
+- picamera2-manual: <https://datasheets.raspberrypi.com/camera/picamera2-manual.pdf>
+- geoogle mediapipe: <https://github.com/google-ai-edge/mediapipe>
 
-## Download
+## Install
 
 Download this repository to your Raspberry Pi:
 
-```shell
+```bash
 cd ~
 git clone -b picamera2 https://github.com/sunfounder/vilib.git
 ```
 
-## Install
+Install
 
-```shell
+```bash
 cd ~/vilib
 sudo python3 install.py 
 ```
