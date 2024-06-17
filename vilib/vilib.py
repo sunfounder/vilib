@@ -67,16 +67,13 @@ def index():
     return render_template('index.html')
 
 def get_frame():
-    while not Vilib.frame_process_completed:
-        pass
-    Vilib.frame_process_completed = False
-    return cv2.imencode('.jpg', Vilib.img)[1].tobytes()
+    return cv2.imencode('.jpg', Vilib.flask_img)[1].tobytes()
 
 def get_qrcode_pictrue():
-    return cv2.imencode('.jpg', Vilib.img)[1].tobytes()
+    return cv2.imencode('.jpg', Vilib.flask_img)[1].tobytes()
 
 def get_png_frame():
-    return cv2.imencode('.png', Vilib.img)[1].tobytes()
+    return cv2.imencode('.png', Vilib.flask_img)[1].tobytes()
 
 def get_qrcode():
     while Vilib.qrcode_img_encode is None:
@@ -199,7 +196,7 @@ class Vilib(object):
     qrcode_win_name = 'qrcode'
 
     img = Manager().list(range(1))
-    frame_process_completed = False
+    flask_img = Manager().list(range(1))
 
     Windows_Name = "picamera"
     imshow_flag = False
@@ -242,6 +239,8 @@ class Vilib(object):
         preview_config.colour_space = libcamera.ColorSpace.Sycc()
         preview_config.buffer_count = 4
         preview_config.queue = True
+        # preview_config.raw = {'size': (2304, 1296)}
+        preview_config.controls = {'FrameRate': 60} # change picam2.capture_array() takes time
 
         try:
             picam2.start()
@@ -259,8 +258,11 @@ class Vilib(object):
             start_time = time.time()
             while True:
                 # ----------- extract image data ----------------
+                # st = time.time()
                 Vilib.img = picam2.capture_array()
-              
+                # print(f'picam2.capture_array(): {time.time() - st:.6f}')
+                # st = time.time()
+
                 # ----------- image gains and effects ----------------
 
                 # ----------- image detection and recognition ----------------
@@ -299,8 +301,11 @@ class Vilib(object):
                             cv2.LINE_AA, # line_type: LINE_8 (default), LINE_4, LINE_AA
                         )
 
-                # ---- frame_process_completed --- 
-                Vilib.frame_process_completed = True
+                # ---- copy img for flask --- 
+                # st = time.time()
+                Vilib.flask_img = Vilib.img
+                # print(f'vilib.flask_img: {time.time() - st:.6f}')
+
                 # ----------- display on desktop ----------------
                 if Vilib.imshow_flag == True:
                     try:
@@ -322,6 +327,9 @@ class Vilib(object):
                 # ----------- exit ----------------
                 if Vilib.camera_run == False:
                     break
+
+                # print(f'loop end: {time.time() - st:.6f}')
+                
         except KeyboardInterrupt as e:
             print(e)
         finally:
