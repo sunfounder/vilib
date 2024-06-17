@@ -1,5 +1,17 @@
 # Change Log
 
+## [0.3.2] - 2024-6-17
+
+### Optimized
+
+- Separate different functions into separate files to improve code readability
+- Optimize detection mark drawing
+
+### Added
+
+- Add draw fps
+- Add QRcode making
+
 ## [0.2.1] - 2024-3-15
 
 ### Optimized
