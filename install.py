@@ -178,6 +178,7 @@ PIP_INSTALL_LIST = [
     "tflite-runtime",
     "Flask",
     "imutils",
+    "qrcode",
     "pyzbar", # pyzbar:one-dimensional barcodes and QR codes
     "pyzbar[scripts]",
     "readchar", # will update setuptools to the latest version
