@@ -10,19 +10,20 @@ import numpy as np
 
 import cv2
 
-from PIL import Image
 from tflite_runtime.interpreter import Interpreter
 import threading
+
+from .utils import load_labels
 
 CAMERA_WIDTH = 640
 CAMERA_HEIGHT = 480
 
-model_path = '/opt/vilib/mobilenet_v1_0.25_224_quant.tflite'
-labels_path = '/opt/vilib/labels_mobilenet_quant_v1_224.txt'
+default_model = '/opt/vilib/mobilenet_v1_0.25_224_quant.tflite'
+default_labels = '/opt/vilib/labels_mobilenet_quant_v1_224.txt'
 
-def load_labels(path):
-  with open(path, 'r') as f:
-    return {i: line.strip() for i, line in enumerate(f.readlines())}
+image_classification_obj_parameter = {}
+image_classification_obj_parameter['name'] = ""  # result
+image_classification_obj_parameter['acc'] = 0 # accuracy
 
 def set_input_tensor(interpreter, image):
   tensor_index = interpreter.get_input_details()[0]['index']
@@ -30,7 +31,7 @@ def set_input_tensor(interpreter, image):
   input_tensor[:, :] = image
 
 
-def __classify_image(interpreter, image,labels_map):
+def __classify_image(interpreter, image, labels_map):
   """Returns a sorted array of classification results."""
   set_input_tensor(interpreter, image)
   interpreter.invoke()
@@ -96,7 +97,15 @@ def imgshow_fuc(input_height, input_width,labels):
 
     if len(results) != 0:
       label_id, prob = results[0]
-      cv2.putText(frame,labels[label_id] + " " + str(round(prob,3)), (5,30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0,255,255), 1, cv2.LINE_AA)
+      cv2.putText(frame, 
+                  f"{labels[label_id]} {prob:.3f}", # text
+                  (CAMERA_WIDTH-120, 10), # origin
+                  cv2.FONT_HERSHEY_SIMPLEX,  # font
+                  0.8, # font_scale
+                  (0,255,255), # font_color
+                  1, # thickness
+                  cv2.LINE_AA # line_type: LINE_8 (default), LINE_4, LINE_AA
+                  )
       cv2.putText(frame, '%.1fms' % (elapsed_ms), (CAMERA_WIDTH-120, 40),cv2.FONT_HERSHEY_PLAIN,1, (255, 255, 225), 1)       
       cv2.putText(frame, 'fps %s'%round(fps,1), (CAMERA_WIDTH-120, 20),cv2.FONT_HERSHEY_PLAIN,1,(255, 255, 225),1)  
     cv2.imshow('Detecting...', frame) 
@@ -120,12 +129,12 @@ def main():
       '--model', 
       help='File path of .tflite file.',
       required=False,
-      default=model_path)
+      default=default_model)
   parser.add_argument(
       '--labels', 
       help='File path of labels file.',
       required=False,
-      default=labels_path)
+      default=default_labels)
   args = parser.parse_args()
 
   # loading model and corresponding label
@@ -158,8 +167,13 @@ def main():
     time.sleep(0.01)
 
 
-def classify_image(image, model=model_path,labels=labels_path):
+def classify_image(image, model=None, labels=None):
   # loading model and corresponding label
+  if model is None:
+    model = default_model
+  if labels is None:
+    labels = default_labels
+
   if not os.path.exists(model):
     print('incorrect model path ')
     return image
@@ -173,13 +187,25 @@ def classify_image(image, model=model_path,labels=labels_path):
 
   if len(image) != 0:
     # resize
-    img = cv2.resize(image,(input_width,input_height))
+    img = cv2.resize(image, (input_width, input_height))
     # classify
-    results = __classify_image(interpreter,img,labels)
+    results = __classify_image(interpreter, img,labels)
     label_id, prob = results[0]
-    print(labels[label_id], prob)
+    # print(labels[label_id], prob)
+
+    image_classification_obj_parameter['name'] = labels[label_id]
+    image_classification_obj_parameter['acc'] = prob
+
     # putText
-    cv2.putText(image,labels[label_id] + " " + str(round(prob,3)), (5,30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0,255,255), 1, cv2.LINE_AA)
+    cv2.putText(image, 
+                f"{labels[label_id]} {prob:.3f}", # text
+                (10, 25), # origin
+                cv2.FONT_HERSHEY_SIMPLEX,  # font
+                0.8, # font_scale
+                (0, 255, 255), # font_color
+                1, # thickness
+                cv2.LINE_AA # line_type: LINE_8 (default), LINE_4, LINE_AA
+                )
 
   return image
   
