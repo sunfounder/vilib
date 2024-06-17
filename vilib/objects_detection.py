@@ -14,25 +14,13 @@ from PIL import Image
 from tflite_runtime.interpreter import Interpreter
 import threading
 
+from .utils import load_labels
+
 CAMERA_WIDTH = 640
 CAMERA_HEIGHT = 480
 
-model_path = '/opt/vilib/detect.tflite'
-labels_path = '/opt/vilib/coco_labels.txt'
-
-def load_labels(path):
-  """Loads the labels file. Supports files with or without index numbers."""
-  with open(path, 'r', encoding='utf-8') as f:
-    lines = f.readlines()
-    labels = {}
-    for row_number, content in enumerate(lines):
-      pair = re.split(r'[:\s]+', content.strip(), maxsplit=1)
-      if len(pair) == 2 and pair[0].strip().isdigit():
-        labels[int(pair[0])] = pair[1].strip()
-      else:
-        labels[row_number] = pair[0].strip()
-  return labels
-
+default_model = '/opt/vilib/detect.tflite'
+default_labels = '/opt/vilib/coco_labels.txt'
 
 def set_input_tensor(interpreter, image):
   """Sets the input tensor."""
@@ -85,15 +73,28 @@ def put_text(img,results,labels_map,width=CAMERA_WIDTH,height=CAMERA_HEIGHT):
         ymax = int(ymax * height)
 
         cv2.rectangle(img,(xmin, ymin), (xmax, ymax),colors[i%7],2)
-        cv2.putText(img, '%s %.2f' % (labels_map[obj['class_id']], obj['score']), (xmin+6, ymin+24),cv2.FONT_HERSHEY_PLAIN,1, colors[i%7], 1) #FONT_HERSHEY_DUPLEX
+        cv2.putText(img,
+                    f"{labels_map[obj['class_id']]} {obj['score']:.2f}",
+                    (xmin+6, ymin+18),
+                    cv2.FONT_HERSHEY_PLAIN, #FONT_HERSHEY_DUPLEX
+                    1.2,
+                    colors[i%7],
+                    1,
+                    cv2.LINE_AA # line_type: LINE_8 (default), LINE_4, LINE_AA
+                    ) 
     #     print('%s %.2f' % (labels_map[obj['class_id']], obj['score']))
     # print('\n')
 
     return img
 
 # For static images:
-def detect_objects(image,model=model_path,labels=labels_path,width=CAMERA_WIDTH,height=CAMERA_HEIGHT,threshold=0.4):
+def detect_objects(image, model=None, labels=None, width=CAMERA_WIDTH, height=CAMERA_HEIGHT, threshold=0.4):
   # loading model and corresponding label
+  if model is None:
+    model = default_model
+  if labels is None:
+    labels = default_labels
+
   if not os.path.exists(model):
     print('incorrect model path ')
     return image
@@ -107,11 +108,11 @@ def detect_objects(image,model=model_path,labels=labels_path,width=CAMERA_WIDTH,
 
   if len(image) != 0:
     # resize
-    img = cv2.resize(image,(input_width,input_height))
+    img = cv2.resize(image, (input_width, input_height))
     # classify
-    results = __detect_objects(interpreter,img,threshold)
+    results = __detect_objects(interpreter, img, threshold)
     # putText
-    image = put_text(image,results,labels,width,height)
+    image = put_text(image, results, labels, width, height)
     
   return  image
 
@@ -177,12 +178,12 @@ def main():
       '--model', 
       help='File path of .tflite file.',
       required=False,
-      default=model_path)
+      default=default_model)
   parser.add_argument(
       '--labels', 
       help='File path of labels file.',
       required=False,
-      default=labels_path)
+      default=default_labels)
   parser.add_argument(
       '--threshold',
       help='Score threshold for detected objects.',
