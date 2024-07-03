@@ -24,15 +24,6 @@ default_labels = '/opt/vilib/coco_labels.txt'
 
 #######################################################
 object_detection_list_parameter = []
-
-def get_object_dictionary(name="unknown",acc=0):
-  return {
-    "name": name,
-    "acc": acc,
-    # corners,
-    # position,
-    # anything else,
-  }
 #######################################################
 
 def set_input_tensor(interpreter, image):
@@ -225,6 +216,7 @@ def main():
       results = __detect_objects(interpreter, image,args.threshold)
       elapsed_ms = (time.monotonic() - start_time) * 1000
       # print(results)
+      object_detection_list_parameter = results
 
     if run_flag == False:
       print('\nend...')
