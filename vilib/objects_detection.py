@@ -25,7 +25,12 @@ default_labels = '/opt/vilib/coco_labels.txt'
 #######################################################
 object_detection_list_parameter = []
 
-def cloneListIntoList(source,destination):
+def add_class_names(objects):
+  labels = load_labels(default_labels)
+  for object in objects:
+    object["class_name"] = labels[object['class_id']]
+
+def copy_list_into_list(source,destination):
   destination.clear()
   for i in source:
     destination.append(i)
@@ -66,7 +71,9 @@ def __detect_objects(interpreter, image, threshold):
       }
       results.append(result)
       #global object_detection_list_parameter
-  cloneListIntoList(results,object_detection_list_parameter)
+  # Allow programmer to access the results
+  copy_list_into_list(results,object_detection_list_parameter)
+  add_class_names(object_detection_list_parameter)
   return results
 
 
