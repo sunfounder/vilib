@@ -22,6 +22,19 @@ CAMERA_HEIGHT = 480
 default_model = '/opt/vilib/detect.tflite'
 default_labels = '/opt/vilib/coco_labels.txt'
 
+#######################################################
+object_detection_list_parameter = []
+
+def get_object_dictionary(name="unknown",acc=0):
+  return {
+    "name": name,
+    "acc": acc,
+    # corners,
+    # position,
+    # anything else,
+  }
+#######################################################
+
 def set_input_tensor(interpreter, image):
   """Sets the input tensor."""
   tensor_index = interpreter.get_input_details()[0]['index']
