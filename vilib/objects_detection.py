@@ -24,6 +24,11 @@ default_labels = '/opt/vilib/coco_labels.txt'
 
 #######################################################
 object_detection_list_parameter = ["Test_a","Test_b"]
+
+def cloneListIntoList(source,destination):
+  destination.clear()
+  for i in source:
+    destination.append(i)
 #######################################################
 
 def set_input_tensor(interpreter, image):
@@ -60,10 +65,9 @@ def __detect_objects(interpreter, image, threshold):
           'score': scores[i]
       }
       results.append(result)
-      global object_detection_list_parameter
-      object_detection_list_parameter = results.copy()
-      object_detection_list_parameter.append("FLAG1")
-      print("TRUE LEN:",len(object_detection_list_parameter))
+      #global object_detection_list_parameter
+  cloneListIntoList(results,object_detection_list_parameter)
+  object_detection_list_parameter = results.copy()
   return results
 
 
