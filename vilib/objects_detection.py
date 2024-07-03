@@ -63,7 +63,7 @@ def __detect_objects(interpreter, image, threshold):
       global object_detection_list_parameter
       object_detection_list_parameter = results.copy()
       object_detection_list_parameter.append("FLAG1")
-      print("A THING HAPPENED")
+      print("TRUE LEN:",len(object_detection_list_parameter))
   return results
 
 
@@ -119,9 +119,6 @@ def detect_objects(image, model=None, labels=None, width=CAMERA_WIDTH, height=CA
     img = cv2.resize(image, (input_width, input_height))
     # classify
     results = __detect_objects(interpreter, img, threshold)
-    global object_detection_list_parameter
-    object_detection_list_parameter = results.copy()
-    object_detection_list_parameter.append("FLAG2")
     # putText
     image = put_text(image, results, labels, width, height)
     
@@ -223,9 +220,6 @@ def main():
       results = __detect_objects(interpreter, image,args.threshold)
       elapsed_ms = (time.monotonic() - start_time) * 1000
       # print(results)
-      global object_detection_list_parameter
-      object_detection_list_parameter = results.copy()
-      object_detection_list_parameter.append("FLAG3")
 
     if run_flag == False:
       print('\nend...')
