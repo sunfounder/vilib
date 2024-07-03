@@ -67,7 +67,6 @@ def __detect_objects(interpreter, image, threshold):
       results.append(result)
       #global object_detection_list_parameter
   cloneListIntoList(results,object_detection_list_parameter)
-  object_detection_list_parameter = results.copy()
   return results
 
 
