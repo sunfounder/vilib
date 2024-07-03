@@ -60,6 +60,8 @@ def __detect_objects(interpreter, image, threshold):
           'score': scores[i]
       }
       results.append(result)
+      object_detection_list_parameter = results
+      object_detection_list_parameter.append("FLAG1")
   return results
 
 
@@ -115,6 +117,8 @@ def detect_objects(image, model=None, labels=None, width=CAMERA_WIDTH, height=CA
     img = cv2.resize(image, (input_width, input_height))
     # classify
     results = __detect_objects(interpreter, img, threshold)
+    object_detection_list_parameter = results
+    object_detection_list_parameter.append("FLAG2")
     # putText
     image = put_text(image, results, labels, width, height)
     
@@ -217,6 +221,7 @@ def main():
       elapsed_ms = (time.monotonic() - start_time) * 1000
       # print(results)
       object_detection_list_parameter = results
+      object_detection_list_parameter.append("FLAG3")
 
     if run_flag == False:
       print('\nend...')
