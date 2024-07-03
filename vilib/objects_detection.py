@@ -23,7 +23,7 @@ default_model = '/opt/vilib/detect.tflite'
 default_labels = '/opt/vilib/coco_labels.txt'
 
 #######################################################
-object_detection_list_parameter = ["Test_a","Test_b"]
+object_detection_list_parameter = []
 
 def cloneListIntoList(source,destination):
   destination.clear()
