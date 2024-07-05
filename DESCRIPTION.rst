@@ -1,3 +1,3 @@
-Raspberry Pi
+Vilib
 =======================
-Picrawler gait Library for Raspberry Pi
+Vision Library for Raspberry Pi

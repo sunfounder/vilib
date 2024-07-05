@@ -3,7 +3,10 @@ import os
 import time
 import datetime
 
-print('Launching ...')
+from .version import __version__
+
+print(f'Launching villib {__version__} ...')
+
 import cv2
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
@@ -18,15 +21,15 @@ from multiprocessing import Process, Manager
 
 from flask import Flask, render_template, Response
 
-# user and User home directory
-User = os.popen('echo ${SUDO_USER:-$LOGNAME}').readline().strip()
-UserHome = os.popen('getent passwd %s | cut -d: -f 6'%User).readline().strip()
-# print(User)  # pi
-# print(UserHome) # /home/pi
+# user and user home directory
+user = os.popen("echo ${SUDO_USER:-$(who -m | awk '{ print $1 }')}").readline().strip()
+user_home = os.popen('getent passwd %s | cut -d: -f 6'%user).readline().strip()
+# print(user)  # pi
+# print(user_home) # /home/pi
 
 # Default path for pictures and videos
-Default_Pictures_Path = '%s/Pictures/vilib/'%UserHome
-Default_Videos_Path = '%s/Videos/vilib/'%UserHome
+Default_Pictures_Path = '%s/Pictures/vilib/'%user_home
+Default_Videos_Path = '%s/Videos/vilib/'%user_home
 
 # utils
 def run_command(cmd):
@@ -120,13 +123,14 @@ def get_png_frame():
 def gen():
     """Video streaming generator function."""
     while True:  
-
+        # start_time = time.time()
         frame = get_frame()
         yield (b'--frame\r\n'
                b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
         time.sleep(0.03)
+        # end_time = time.time() - start_time
+        # print('flask fps:%s'%int(1/end_time))
 
-        
 @app.route('/mjpg')   ## video
 def video_feed():
     # from camera import Camera
@@ -136,7 +140,7 @@ def video_feed():
     response.headers.add("Access-Control-Allow-Origin", "*")
     return response
 
-@app.route('/mjpg.jpg')  ##picture
+@app.route('/mjpg.jpg')  # jpg
 def video_feed_jpg():
     # from camera import Camera
     """Video streaming route. Put this in the src attribute of an img tag."""
@@ -144,7 +148,7 @@ def video_feed_jpg():
     response.headers.add("Access-Control-Allow-Origin", "*")
     return response
 
-@app.route('/mjpg.png')  ##picture
+@app.route('/mjpg.png')  # png
 def video_feed_png():
     # from camera import Camera
     """Video streaming route. Put this in the src attribute of an img tag."""
@@ -157,8 +161,7 @@ def web_camera_start():
     try:
         app.run(host='0.0.0.0', port=9000, threaded=True, debug=False)
     except Exception as e:
-        # print(e)
-        pass
+        print(e)
 
 # endregion : flask
 
@@ -224,12 +227,9 @@ def add_text_to_image(name, text_1):
     image_target.save(name,quality=95,subsampling=0)# 
 
 
-# utils
 
 
 class Vilib(object): 
-
-    video_flag = False
 
     flask_process = None
     camera_thread = None
@@ -243,11 +243,15 @@ class Vilib(object):
     video_source = 0
 
     # 用于寻找手势识别的肤色的区域的模板图片，可以通过手势识别的校准功能更改图片
-    roi = cv2.imread("/opt/vilib/cali.jpg")
-    roi_hsv = cv2.cvtColor(roi, cv2.COLOR_BGR2HSV)
+    try:
+        roi = cv2.imread("/opt/vilib/cali.jpg")
+        roi_hsv = cv2.cvtColor(roi, cv2.COLOR_BGR2HSV)
+    except Exception as e:
+        print(e)
 
     # 创建共享字典，提供外部接口动态修改，以及返回字典内容
-    detect_obj_parameter = Manager().dict()
+    # detect_obj_parameter = Manager().dict()
+    detect_obj_parameter = {}
     img_array = Manager().list(range(2))
 
     # 默认的颜色识别颜色为红色
@@ -358,7 +362,6 @@ class Vilib(object):
     detect_obj_parameter['watermark_flag'] = True
     detect_obj_parameter['camera_flip'] = False
     detect_obj_parameter['watermark'] = "Shot by Picar-x"
-    # detect_obj_parameter['google_upload_flag'] = False
 
     rt_img = np.ones((320,240),np.uint8)
     front_view_img = np.zeros((240,320,3), np.uint8)
@@ -366,7 +369,6 @@ class Vilib(object):
     # front_view_img.fill(255)       
     img_array[0] = rt_img
     img_array[1] = rt_img
-    # img_array = rt_img
     vi_img = np.ones((320,240),np.uint8)  
 
 # 通过两个参数Shift_left，Shift_right修改
@@ -392,12 +394,12 @@ class Vilib(object):
         Vilib.detect_obj_parameter['video_flag'] = flag
 
 
-    @staticmethod
-    def watermark(watermark = "Shot by Picar-x"):
-        # global button_motion
-        watermark = str(watermark)
-        Vilib.detect_obj_parameter['watermark_flag'] = True
-        Vilib.detect_obj_parameter['watermark'] = watermark
+    # @staticmethod
+    # def watermark(watermark = "Shot by Picar-x"):
+    #     # global button_motion
+    #     watermark = str(watermark)
+    #     Vilib.detect_obj_parameter['watermark_flag'] = True
+    #     Vilib.detect_obj_parameter['watermark'] = watermark
 
     @staticmethod
     def show_setting(flag):
@@ -424,14 +426,13 @@ class Vilib(object):
 
     @staticmethod
     def make_qrcode_picture(data):
-
         Vilib.img_array = qrcode.make(data=data)
 
 
 # 返回检测到的颜色的坐标，大小，数量
     @staticmethod
     def color_detect_object(obj_parameter):
-        if obj_parameter == 'x':         
+        if obj_parameter == 'x':       
             return int(Vilib.detect_obj_parameter['color_x']/214.0)-1
         elif obj_parameter == 'y':
             return -1*(int(Vilib.detect_obj_parameter['color_y']/160.2)-1) #max_size_object_coordinate_y
@@ -446,7 +447,7 @@ class Vilib(object):
 # 返回检测到的人脸的坐标，大小，数量
     @staticmethod
     def human_detect_object(obj_parameter):
-        if obj_parameter == 'x':        
+        if obj_parameter == 'x':
             return int(Vilib.detect_obj_parameter['human_x']/214.0)-1
         elif obj_parameter == 'y':
             return -1*(int(Vilib.detect_obj_parameter['human_y']/160.2)-1) #max_size_object_coordinate_y
@@ -461,7 +462,7 @@ class Vilib(object):
 # 返回检测到的交通标志的坐标，大小，类型，准确度
     @staticmethod
     def traffic_sign_detect_object(obj_parameter):
-        if obj_parameter == 'x':         
+        if obj_parameter == 'x':
             return int(Vilib.detect_obj_parameter['traffic_sign_x']/214.0)-1
         elif obj_parameter == 'y':
             return -1*(int(Vilib.detect_obj_parameter['traffic_sign_y']/160.2)-1) #max_size_object_coordinate_y
@@ -469,7 +470,8 @@ class Vilib(object):
             return Vilib.detect_obj_parameter['traffic_sign_w']   #objects_max_width
         elif obj_parameter == 'height':
             return Vilib.detect_obj_parameter['traffic_sign_h']   #objects_max_height
-
+        elif obj_parameter == 'number':      
+            return Vilib.detect_obj_parameter['traffic_sign_n']   #objects_count
         elif obj_parameter == 'type':      
             return Vilib.detect_obj_parameter['traffic_sign_t']   #objects_type
         elif obj_parameter == 'accuracy':      
@@ -479,7 +481,7 @@ class Vilib(object):
 # 返回检测到的手势的坐标，大小，类型，准确度
     @staticmethod
     def gesture_detect_object(obj_parameter):
-        if obj_parameter == 'x':         
+        if obj_parameter == 'x':
             return int(Vilib.detect_obj_parameter['gesture_x']/214.0)-1
         elif obj_parameter == 'y':
             return -1*(int(Vilib.detect_obj_parameter['gesture_y']/160.2)-1) #max_size_object_coordinate_y
@@ -496,7 +498,7 @@ class Vilib(object):
 # 返回检测到的二维码的坐标，大小，类型，准确度
     @staticmethod
     def qrcode_detect_object(obj_parameter = 'data'):
-        if obj_parameter == 'x':        
+        if obj_parameter == 'x':
             return int(Vilib.detect_obj_parameter['qr_x']/214.0)-1
         elif obj_parameter == 'y':
             return -1*(int(Vilib.detect_obj_parameter['qr_y']/160.2)-1) #max_size_object_coordinate_y
@@ -508,13 +510,17 @@ class Vilib(object):
             return Vilib.detect_obj_parameter['qr_data']   #objects_count
         return 'none'
 
+
 # 设置要检测的颜色
     @staticmethod
     def detect_color_name(color_name):
-        Vilib.detect_obj_parameter['color_default'] = color_name
-        Vilib.detect_obj_parameter['lower_color'] = np.array([min(Vilib.color_dict[Vilib.detect_obj_parameter['color_default']]), 60, 60])  
-        Vilib.detect_obj_parameter['upper_color'] = np.array([max(Vilib.color_dict[Vilib.detect_obj_parameter['color_default']]), 255, 255])
-        Vilib.detect_obj_parameter['cdf_flag']  = True
+        if color_name == 'close':
+            Vilib.detect_obj_parameter['cdf_flag']  = False
+        else:
+            Vilib.detect_obj_parameter['color_default'] = color_name
+            Vilib.detect_obj_parameter['lower_color'] = np.array([min(Vilib.color_dict[Vilib.detect_obj_parameter['color_default']]), 60, 60])  
+            Vilib.detect_obj_parameter['upper_color'] = np.array([max(Vilib.color_dict[Vilib.detect_obj_parameter['color_default']]), 255, 255])
+            Vilib.detect_obj_parameter['cdf_flag']  = True
 
 # function switch
     # 人脸检测开关    
@@ -661,8 +667,14 @@ class Vilib(object):
                         try:      
                             cv2.imshow("Picamera",img)
                             cv2.waitKey(1) # 1 ms
+                            if cv2.getWindowProperty('Picamera', cv2.WND_PROP_VISIBLE) == 0:
+                                # cv2.destroyAllWindows()
+                                cv2.destroyWindow('Picamera')
+                                Vilib.detect_obj_parameter['imshow_flag'] = False
+                                Vilib.detect_obj_parameter['camera_start_flag'] = False
                         except Exception as e: 
                             print(e)
+                            print('imshow faileed, maybe this environment does not have "display" ')
 
                     if Vilib.detect_obj_parameter['camera_start_flag'] == False:
                         break    
@@ -692,17 +704,18 @@ class Vilib(object):
                 if Vilib.detect_obj_parameter['camera_start_flag'] == False:
                     break
 
-                picture_time = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
-                Vilib.detect_obj_parameter['picture_path'] = Default_Pictures_Path + picture_time + '.jpg'
+                # picture_time = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
+                # Vilib.detect_obj_parameter['picture_path'] = Default_Pictures_Path + picture_time + '.jpg'
 
-                a_t = "sudo raspistill -t 250  -w 2592 -h 1944 -vf" + " -rot " + str(change_type_dict['rotation']) + " -ifx " + str(EFFECTS[Vilib.detect_obj_parameter['eff']]) +" -o " + Vilib.detect_obj_parameter['picture_path']
-                
+                # a_t = "sudo raspistill -t 250  -w 2592 -h 1944 -vf  -rot %s -ifx %s -o %s " %( 
+                #     str(change_type_dict['rotation']),
+                #     str(EFFECTS[Vilib.detect_obj_parameter['eff']]),
+                #     Vilib.detect_obj_parameter['picture_path'],
+                #     ) 
+                # run_command(a_t)
 
-                print(a_t)
-                run_command(a_t)
-
-                if Vilib.detect_obj_parameter['watermark_flag'] == True:
-                    add_text_to_image(Vilib.detect_obj_parameter['picture_path'],Vilib.detect_obj_parameter['watermark'])
+                # if Vilib.detect_obj_parameter['watermark_flag'] == True:
+                #     add_text_to_image(Vilib.detect_obj_parameter['picture_path'],Vilib.detect_obj_parameter['watermark'])
 
                 #init again
                 camera = PiCamera()
@@ -713,7 +726,9 @@ class Vilib(object):
                 camera.image_effect = e
                 rawCapture = PiRGBArray(camera, size=camera.resolution) 
                 Vilib.detect_obj_parameter['photo_button_flag'] = False
-                   
+
+        except KeyboardInterrupt:
+            pass       
         finally:
             print('camera close')
             camera.close()
@@ -759,8 +774,8 @@ class Vilib(object):
         y2 = int(y + h)
 
         new_img = input_img[y1:y2,x1:x2]
-        new_img = (new_img / 255.0)   #归一化
-        new_img = (new_img - 0.5) * 2.0  
+        new_img = (new_img / 255.0)   
+        new_img = (new_img - 0.5) * 2.0
 
         resize_img = cv2.resize(new_img, (96,96), interpolation=cv2.INTER_LINEAR)   #调整为识别模型的要求的96x96的图像大小
         flatten_img = np.reshape(resize_img, (96,96,3))
@@ -834,7 +849,6 @@ class Vilib(object):
             hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)              # 2.从BGR转换到HSV
             cv2.circle(img, (160,120), 1, (255,255,255), -1)
 
-            
             ### red
             mask_red_1 = cv2.inRange(hsv,(157,20,20), (180,255,255))
             mask_red_2 = cv2.inRange(hsv,(0,20,20), (10,255,255))
@@ -844,14 +858,10 @@ class Vilib(object):
 
             ### all
             mask_all = cv2.bitwise_or(mask_red_1, mask_blue)
-            
             mask_all = cv2.bitwise_or(mask_red_2, mask_all)
-            
 
             open_img = cv2.morphologyEx(mask_all, cv2.MORPH_OPEN,Vilib.kernel_5,iterations=1)              #开运算 
-
             contours, hierarchy = findContours(open_img)
-
             contours = sorted(contours,key = Vilib.cnt_area, reverse=False)
             traffic_n = len(contours)
             max_area = 0
@@ -861,17 +871,13 @@ class Vilib(object):
                 for i in contours:    # 遍历所有的轮廓
                     x,y,w,h = cv2.boundingRect(i)      # 将轮廓分解为识别对象的左上角坐标和宽、高
 
-                        # 在图像上画上矩形（图片、左上角坐标、右下角坐标、颜色、线条宽度）
+                    # 在图像上画上矩形（图片、左上角坐标、右下角坐标、颜色、线条宽度）
                     if w > 32 and h > 32: 
-
                         acc_val, traffic_type = Vilib.traffic_predict(img,x,y,w,h)
                         # print(traffic_type,acc_val)
                         acc_val = round(acc_val*100)
                         if acc_val >= 75:   
-
                             if traffic_type == 1 or traffic_type == 2 or traffic_type == 3:
-
-
                                 simple_gray = cv2.cvtColor(img[y:y+h,x:x+w], cv2.COLOR_BGR2GRAY)
                                 # new_mask_blue = cv2.inRange(hsv[y:y+h,x:x+w],(92,70,50), (118,255,255))
                                 circles = cv2.HoughCircles(simple_gray,cv2.HOUGH_GRADIENT,1,32,\
@@ -907,21 +913,17 @@ class Vilib(object):
 
                                 open_img = cv2.morphologyEx(red_mask_all, cv2.MORPH_OPEN,Vilib.kernel_5,iterations=1)              #开运算  
                                 open_img = cv2.dilate(open_img, Vilib.kernel_5,iterations=5) 
-
-                                blue_contours, hierarchy = findContours(open_img)      
-                                
+                                blue_contours, hierarchy = findContours(open_img) 
                                 contours_count = len(blue_contours)
                                 if contours_count >=1:
                                 # print("contours:",contours_count)
                                     blue_contours = sorted(blue_contours,key = Vilib.cnt_area, reverse=True)
-                                
                                 
                                     epsilon = 0.025 * cv2.arcLength(blue_contours[0], True)
                                     approx = cv2.approxPolyDP(blue_contours[0], epsilon, True)
 
                                 #     # 分析几何形状
                                     corners = len(approx)
-                                    
 
                                     if corners >= 0:
                                         traffic_sign_coor = (int(x+w/2),int(y+h/2))
@@ -993,16 +995,13 @@ class Vilib(object):
             # thresh = cv2.merge((dilate, dilate, dilate))
                 # 对原图与二值化后的阈值图像进行位运算，得到结果
             # res = cv2.bitwise_and(img, thresh)
-            
             # ycrcb=cv2.cvtColor(img,cv2.COLOR_BGR2YCR_CB)
-
             # cr_skin = cv2.inRange(ycrcb, (85,124,121), (111,131,128))
-
             # open_img = cv2.morphologyEx(cr_skin, cv2.MORPH_OPEN,Vilib.kernel_5,iterations=1)
 
-            contours, hierarchy = findContours(dilate)      
-
+            contours, hierarchy = findContours(dilate)
             ges_num = len(contours)
+            is_ges = False
             if ges_num > 0:
                 contours = sorted(contours,key = Vilib.cnt_area, reverse=True)
                 # for i in range(0,len(contours)):    #遍历所有的轮廓
@@ -1011,9 +1010,8 @@ class Vilib(object):
                 faces = Vilib.face_cascade.detectMultiScale(gray[y:y+h,x:x+w], 1.3, 2)
             # print(len(faces))
                 face_len = len(faces)
-                    
-                #在图像上画上矩形（图片、左上角坐标、右下角坐标、颜色、线条宽度）
-         
+
+                # 在图像上画上矩形（图片、左上角坐标、右下角坐标、颜色、线条宽度）
                 if w >= 60 and h >= 60 and face_len == 0:
                     # acc_val,ges_type = Vilib.gesture_predict(img,x-2.2*w,y-2.8*h,4.4*w,5.6*h) 
                     acc_val,ges_type = Vilib.gesture_predict(img,x-0.1*w,y-0.2*h,1.1*w,1.2*h) 
@@ -1025,32 +1023,15 @@ class Vilib(object):
                         cv2.rectangle(img,(0,0),(125,27),(204,209,72),-1, cv2.LINE_AA)
                         cv2.putText(img,ges_dict[ges_type]+': '+str(acc_val) + '%',(0,17),cv2.FONT_HERSHEY_SIMPLEX,0.6,(255,255,255),2)  ##(0,97,240)
 
-
                         Vilib.detect_obj_parameter['gesture_x'] = int(x + w/2)
                         Vilib.detect_obj_parameter['gesture_y'] = int(y + h/2)
                         Vilib.detect_obj_parameter['gesture_w'] = w
                         Vilib.detect_obj_parameter['gesture_h'] = h
                         Vilib.detect_obj_parameter['gesture_t'] = ges_dict[ges_type]
                         Vilib.detect_obj_parameter['gesture_acc'] = acc_val
-                                # print()
-                    else:
-                        Vilib.detect_obj_parameter['gesture_x'] = 320
-                        Vilib.detect_obj_parameter['gesture_y'] = 240
-                        Vilib.detect_obj_parameter['gesture_w'] = 0
-                        Vilib.detect_obj_parameter['gesture_h'] = 0
-                        Vilib.detect_obj_parameter['gesture_t'] = 'none'
-                        Vilib.detect_obj_parameter['gesture_acc'] = 0
-
-
-                else:
-                    Vilib.detect_obj_parameter['gesture_x'] = 320
-                    Vilib.detect_obj_parameter['gesture_y'] = 240
-                    Vilib.detect_obj_parameter['gesture_w'] = 0
-                    Vilib.detect_obj_parameter['gesture_h'] = 0
-                    Vilib.detect_obj_parameter['gesture_t'] = 'none'
-                    Vilib.detect_obj_parameter['gesture_acc'] = 0
-
-            else:
+                        is_ges = True
+          
+            if is_ges == False:  
                 Vilib.detect_obj_parameter['gesture_x'] = 320
                 Vilib.detect_obj_parameter['gesture_y'] = 240
                 Vilib.detect_obj_parameter['gesture_w'] = 0
@@ -1073,12 +1054,10 @@ class Vilib(object):
             max_area = 0
             if Vilib.detect_obj_parameter['human_n'] > 0:
                 for (x,y,w,h) in faces:
-                    
                     x = x*2
                     y = y*2
                     w = w*2
                     h = h*2
-
                     cv2.rectangle(img,(x,y),(x+w,y+h),(255,0,0),2)
                     object_area = w*h
                     if object_area > max_area: 
@@ -1087,7 +1066,6 @@ class Vilib(object):
                         Vilib.detect_obj_parameter['human_y'] = int(y + h/2)
                         Vilib.detect_obj_parameter['human_w'] = w
                         Vilib.detect_obj_parameter['human_h'] = h
-            
             else:
                 Vilib.detect_obj_parameter['human_x'] = 320
                 Vilib.detect_obj_parameter['human_y'] = 240
@@ -1108,32 +1086,27 @@ class Vilib(object):
             resize_img = cv2.resize(img, (160,120), interpolation=cv2.INTER_LINEAR)
             hsv = cv2.cvtColor(resize_img, cv2.COLOR_BGR2HSV)              # 2.从BGR转换到HSV
             color_type = Vilib.detect_obj_parameter['color_default']
-            
             mask = cv2.inRange(hsv,np.array([min(Vilib.color_dict[color_type]), 60, 60]), np.array([max(Vilib.color_dict[color_type]), 255, 255]) )           # 3.inRange()：介于lower/upper之间的为白色，其余黑色
             if color_type == 'red':
                  mask_2 = cv2.inRange(hsv, (167,0,0), (180,255,255))
                  mask = cv2.bitwise_or(mask, mask_2)
 
             open_img = cv2.morphologyEx(mask, cv2.MORPH_OPEN,Vilib.kernel_5,iterations=1)              #开运算  
-
             ####在binary中发现轮廓，轮廓按照面积从小到大排列
             contours, hierarchy = findContours(open_img)      
-
             Vilib.detect_obj_parameter['color_n'] = len(contours)
             max_area = 0
-
             if Vilib.detect_obj_parameter['color_n'] > 0: 
                 for i in contours:    #遍历所有的轮廓
                     x,y,w,h = cv2.boundingRect(i)      #将轮廓分解为识别对象的左上角坐标和宽、高
-
-                        #在图像上画上矩形（图片、左上角坐标、右下角坐标、颜色、线条宽度）
+                    # 在图像上画上矩形（图片、左上角坐标、右下角坐标、颜色、线条宽度）
                     if w >= 8 and h >= 8: 
                         x = x*4
                         y = y*4
                         w = w*4
                         h = h*4
                         cv2.rectangle(img,(x,y),(x+w,y+h),(0,255,0),2)
-                                #给识别对象写上标号
+                        # 给识别对象写上标号
                         cv2.putText(img,color_type,(x,y), cv2.FONT_HERSHEY_SIMPLEX, 1,(0,0,255),2)#加减10是调整字符位置
  
                         object_area = w*h
@@ -1266,7 +1239,7 @@ class Vilib(object):
     def camera_close(): 
         if Vilib.camera_thread != None:
             Vilib.detect_obj_parameter['camera_start_flag'] = False
-
+            time.sleep(0.1)
 
 # 开启摄像头网络传输
     @staticmethod
@@ -1286,14 +1259,18 @@ class Vilib(object):
         if Vilib.camera_thread != None and Vilib.camera_thread.is_alive():
             # check gui
             if local == True:
-                if os.path.exists('/usr/share/xsessions/'):
-                    os.environ['XAUTHORITY'] = '%s/.Xauthority'%UserHome
-                    os.environ['DISPLAY'] = ':0.0'
+                # if os.path.exists('/usr/share/xsessions/'):
+                #     os.environ['XAUTHORITY'] = '%s/.Xauthority'%user_home
+                #     os.environ['DISPLAY'] = ':0.0'
+                #     Vilib.detect_obj_parameter['imshow_flag'] = True  
+                #     print("imshow start ...")   
+                if 'DISPLAY' in os.environ.keys():
                     Vilib.detect_obj_parameter['imshow_flag'] = True  
-                    print("imshow start ...")       
+                    print("imshow start ...")
                 else:
                     Vilib.detect_obj_parameter['imshow_flag'] = False 
                     print("local display failed, because there is no gui.") 
+    
             # web video
             if web == True:
                 Vilib.detect_obj_parameter['web_display_flag'] = True 
@@ -1358,18 +1335,25 @@ class Vilib(object):
             if Vilib.rec_video_set["start_flag"] == True:
                 video_out.write(Vilib.img_array[0])          
             if Vilib.rec_video_set["stop_flag"] == True:
+                video_out.release() # note need to release the video writer
                 Vilib.rec_video_set["start_flag"] == False
                 break
 
+
+    rec_thread = None
     @staticmethod
     def rec_video_run():
-        rec_thread = threading.Thread(name='rec_video', target=Vilib.rec_video_work)
-        rec_thread.setDaemon(True)
-        rec_thread.start()
+        if Vilib.rec_thread != None:
+            Vilib.rec_video_stop()
+        Vilib.rec_video_set["stop_flag"] = False
+        Vilib.rec_thread = threading.Thread(name='rec_video', target=Vilib.rec_video_work)
+        Vilib.rec_thread.setDaemon(True)
+        Vilib.rec_thread.start()
 
     @staticmethod
     def rec_video_start():
         Vilib.rec_video_set["start_flag"] = True 
+        Vilib.rec_video_set["stop_flag"] = False
 
     @staticmethod
     def rec_video_pause():
@@ -1379,6 +1363,10 @@ class Vilib(object):
     def rec_video_stop():
         Vilib.rec_video_set["start_flag"] == False
         Vilib.rec_video_set["stop_flag"] = True
+        if Vilib.rec_thread != None:
+            Vilib.rec_thread.join(3)
+            Vilib.rec_thread = None 
+
                         
 # 4.颜色识别 
     @staticmethod 
@@ -1389,7 +1377,7 @@ class Vilib(object):
 # 5.人脸检测
     @staticmethod   
     def face_detect_switch(flag=False):
-        Vilib.human_detect_switch(True)
+        Vilib.human_detect_switch(flag)
 
 
 # 二维码  # 
@@ -1480,3 +1468,6 @@ class Vilib(object):
         return img
 
 
+if __name__ == '__main__':
+    Vilib().camera_start()
+    Vilib.display()

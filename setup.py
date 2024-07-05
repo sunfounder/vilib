@@ -4,6 +4,8 @@ from setuptools import setup, find_packages
 from codecs import open
 import sys 
 from os import path,system
+sys.path.append('./vilib')
+from version import __version__
 
 here = path.abspath(path.dirname(__file__))
 
@@ -18,13 +20,13 @@ setup(
     # Versions should comply with PEP440.  For a discussion on single-sourcing
     # the version across setup.py and the project code, see
     # https://packaging.python.org/en/latest/single_source_version.html
-    version="0.0.1",
+    version=__version__,
 
-    description='Camera Library for Raspberry Pi',
+    description='Vision Library for Raspberry Pi',
     long_description=long_description,
 
     # The project's main homepage.
-    url='https://github.com/sunfounder/SunFounder_camera',
+    url='https://github.com/sunfounder/vilib',
 
     # Author details
     author='SunFounder',
@@ -74,7 +76,7 @@ setup(
     # pip to create the appropriate form of executable for the target platform.
     entry_points={
         'console_scripts': [
-            'face_train = vilib.face:main',
+
         ],
     },
 )
