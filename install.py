@@ -285,7 +285,7 @@ def install():
         run_command('sudo chmod 774 /opt')
         run_command('sudo chown -R %s:%s /opt'%(user_name, user_name))
     do(msg="create dir",
-        cmd='sudo mkdir -p /opt/vilib'
+        cmd='sudo mkdir -p /opt/vilib')
         + ' && sudo chmod 774 /opt/vilib'
         + ' && sudo chown -R %s:%s /opt/vilib'%(user_name, user_name)
         )
