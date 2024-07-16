@@ -16,7 +16,9 @@ def main():
     Vilib.object_detect_switch(True)
 
     while True: # Keep the main program running
-        sleep(0.5)
+        print(Vilib.object_detection_list_parameter)
+        print() # new line
+        sleep(1)
 
 if __name__ == "__main__":
     try:
@@ -28,6 +30,3 @@ if __name__ == "__main__":
     finally:
         Vilib.camera_close()
 
-
-
-    
