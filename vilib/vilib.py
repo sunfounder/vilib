@@ -594,6 +594,7 @@ class Vilib(object):
             Vilib.detect_obj_parameter['qr_w'] = Vilib.qrcode_obj_parameter['w']
             Vilib.detect_obj_parameter['qr_h'] = Vilib.qrcode_obj_parameter['h']
             Vilib.detect_obj_parameter['qr_data'] = Vilib.qrcode_obj_parameter['data']
+            Vilib.detect_obj_parameter['qr_list'] = Vilib.qrcode_obj_parameter['qr_list']
 
     @staticmethod
     def qrcode_detect_func(img):
