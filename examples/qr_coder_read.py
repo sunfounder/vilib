@@ -21,8 +21,11 @@ def main():
     sleep(1)
 
     while True:
-        text = Vilib.detect_obj_parameter['qr_data'] 
-        print(text)
+        texts = [x['text'] for x in Vilib.detect_obj_parameter['qr_list']]
+        if len(texts)>0:
+            print(", ".join(texts))
+        else:
+            print("None")
         sleep(0.5)  
 
 

@@ -8,11 +8,14 @@ qrcode_obj_parameter['y'] = 0   # the largest block center y-axis coordinate
 qrcode_obj_parameter['w'] = 0     # the largest block pixel width
 qrcode_obj_parameter['h'] = 0     # the largest block pixel height
 qrcode_obj_parameter['data'] = "None" # recognition result
+qrcode_obj_parameter['list'] = []
 
 
 def qrcode_recognize(img, border_rgb=(255, 0, 0)):
     # Detect and decode QR codes
     barcodes = pyzbar.decode(img)
+
+    qrcode_obj_parameter['list'].clear()
 
     if len(barcodes) > 0:
         for barcode in barcodes:
@@ -24,6 +27,15 @@ def qrcode_recognize(img, border_rgb=(255, 0, 0)):
             barcodeData = barcode.data.decode("utf-8")
             # barcodeType = barcode.type
             text = f"{barcodeData}"
+
+            # add the barcode to the list of barcodes for output
+            qrcode_obj_parameter['list'].append({
+                'text': text,
+                'x': x,
+                'y': y,
+                'w': w,
+                'h': h,
+            })
 
             if len(text) > 0:
                 qrcode_obj_parameter['data'] = text
