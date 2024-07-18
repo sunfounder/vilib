@@ -367,12 +367,13 @@ class Vilib(object):
             # web video
             if web == True:
                 Vilib.web_display_flag = True
-                wlan0,eth0 = getIP()
+                print("\nWeb display on:")
+                wlan0, eth0 = getIP()
                 if wlan0 != None:
-                    ip = wlan0     
-                else:
-                    ip = eth0
-                print(f'Web display on: http://{ip}:9000/mjpg\n')
+                    print(f"      http://{wlan0}:9000/mjpg")
+                if eth0 != None:
+                    print(f"      http://{eth0}:9000/mjpg")
+                print() # new line
 
                 # ----------- flask_thread ----------------
                 if Vilib.flask_thread == None or Vilib.flask_thread.is_alive() == False:
@@ -674,13 +675,14 @@ class Vilib(object):
                 print("Local display failed, because there is no gui.") 
         # web video
         if web == True:
-            Vilib.web_qrcode_flag = True 
-            wlan0,eth0 = getIP()
+            Vilib.web_qrcode_flag = True
+            print(f'QRcode display on:')
+            wlan0, eth0 = getIP()
             if wlan0 != None:
-                ip = wlan0
-            else:
-                ip = eth0
-            print(f'QRcode display on: http://{ip}:9000/qrcode\n')
+                print(f"      http://{wlan0}:9000/qrcode")
+            if eth0 != None:
+                print(f"      http://{eth0}:9000/qrcode")
+            print() # new line
 
             # ----------- flask_thread ----------------
             if Vilib.flask_thread == None or Vilib.flask_thread.is_alive() == False:
