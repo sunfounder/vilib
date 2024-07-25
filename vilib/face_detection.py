@@ -13,6 +13,7 @@ face_obj_parameter['w'] = 0  # the largest face block pixel width
 face_obj_parameter['h'] = 0  # the largest face pixel height
 face_obj_parameter['n'] = 0  # Number of faces detected
 
+face_cascade = None
 
 def set_face_detection_model(model_path):
     '''
@@ -21,8 +22,11 @@ def set_face_detection_model(model_path):
     :param model_path: The path of face haar-cascade XML classifier file
     :type model_path: str
     '''
-    global face_model_path
+    global face_cascade, face_model_path
+    
     face_model_path = model_path
+    face_cascade = cv2.CascadeClassifier(face_model_path)
+
 
 def face_detect(img, width, height, rectangle_color=(255, 0, 0)):
     '''
@@ -39,6 +43,7 @@ def face_detect(img, width, height, rectangle_color=(255, 0, 0)):
     :returns: The image returned after detection.
     :rtype: Binary list
     '''
+    global face_cascade
     # Reduce image for faster recognition 
     zoom = 2
     width_zoom = int(width / zoom)
@@ -49,7 +54,8 @@ def face_detect(img, width, height, rectangle_color=(255, 0, 0)):
     gray_img = cv2.cvtColor(resize_img, cv2.COLOR_BGR2GRAY) 
 
     # Loading the haar-cascade XML classifier file
-    face_cascade = cv2.CascadeClassifier(face_model_path)
+    if face_cascade is None:
+        face_cascade = cv2.CascadeClassifier(face_model_path)
 
     # Applying the face detection method on the grayscale image
     faces = face_cascade.detectMultiScale(gray_img, scaleFactor=1.3, minNeighbors=3)
