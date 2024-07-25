@@ -14,11 +14,12 @@ Vilib.face_obj_parameter['n']      # Number of face blocks found
 '''
 
 def main():
-    Vilib.camera_start(vflip=False, hflip=False)
+    Vilib.camera_start(vflip=False, hflip=False, processes=1)
     Vilib.show_fps()
     Vilib.display(local=True, web=True)
-    Vilib.face_detect_switch(True)
+    Vilib.face_detect_switch(False)
     sleep(1)
+    Vilib.face_detect_switch(True)
 
     while True:
         n = Vilib.face_obj_parameter['n']

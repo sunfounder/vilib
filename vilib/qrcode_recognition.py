@@ -47,6 +47,6 @@ def qrcode_recognize(img, border_rgb=(255, 0, 0)):
                 qrcode_obj_parameter['y'] = 0
                 qrcode_obj_parameter['w'] = 0
                 qrcode_obj_parameter['h'] = 0
-        return img
+        return img, qrcode_obj_parameter
     else:
-        return img
+        return img, qrcode_obj_parameter

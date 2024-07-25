@@ -4,7 +4,7 @@ from time import sleep
 
 
 def main():
-    Vilib.camera_start(vflip=False, hflip=False)
+    Vilib.camera_start(vflip=False, hflip=False, processes=3)
     Vilib.show_fps()
     Vilib.display(local=True, web=True)
     sleep(1)

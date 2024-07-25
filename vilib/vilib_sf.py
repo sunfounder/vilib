@@ -15,14 +15,8 @@ if 'VILIB_WELCOME' not in os.environ or os.environ['VILIB_WELCOME'] not in [
 
 # set libcamera2 log level
 os.environ['LIBCAMERA_LOG_LEVELS'] = '*:ERROR'
-
-import sys
-
-new_path = '/usr/local/lib/aarch64-linux-gnu/python3.12/site-packages/'
-sys.path.append(new_path)
-import libcamera
-
 from picamera2 import Picamera2
+import libcamera
 
 import cv2
 import numpy as np
@@ -33,7 +27,7 @@ from flask import Flask, render_template, Response
 import time
 import datetime
 import threading
-from multiprocessing import Process, Manager
+from multiprocessing import Process, Manager, Pool
 
 from .utils import *
 
@@ -260,6 +254,12 @@ class Vilib(object):
         fps = 0
         start_time = 0
         framecount = 0
+
+        pool = Pool(1)
+
+        Vilib.img = picam2.capture_array()
+
+
         try:
             start_time = time.time()
             while True:

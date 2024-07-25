@@ -17,10 +17,10 @@ Vilib.close_color_detection()
 
 def main():
 
-    Vilib.camera_start(vflip=False, hflip=False)
+    Vilib.camera_start(vflip=False, hflip=False, processes=1)
     Vilib.show_fps()
     Vilib.display(local=True, web=True)
-    Vilib.color_detect(color="red")  # red, green, blue, yellow , orange, purple
+    Vilib.color_detect(color="red")  # close, red, green, blue, yellow , orange, purple
     sleep(1)
 
     while True:

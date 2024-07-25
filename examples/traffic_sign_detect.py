@@ -14,9 +14,12 @@ Vilib.traffic_sign_obj_parameter['acc']     # accuracy
   
 '''
 
+# traffic_detect_fuc: 0.0209024 46.6
+# traffic_detect_fuc: 0.0308485
+
 def main():
 
-    Vilib.camera_start(vflip=False, hflip=False)
+    Vilib.camera_start(vflip=False, hflip=False, processes=1)
     Vilib.show_fps()
     Vilib.display(local=True, web=True)
     Vilib.traffic_detect_switch(True)

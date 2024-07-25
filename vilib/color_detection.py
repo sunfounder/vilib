@@ -128,7 +128,7 @@ def color_detect_work(img, width, height, color_name, rectangle_color=(0, 0, 255
                 color_obj_parameter['w'] = w
                 color_obj_parameter['h'] = h
 
-    return img
+    return img, color_obj_parameter
 
 # Test
 def test(color):

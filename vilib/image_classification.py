@@ -207,7 +207,7 @@ def classify_image(image, model=None, labels=None):
                 cv2.LINE_AA # line_type: LINE_8 (default), LINE_4, LINE_AA
                 )
 
-  return image
+  return image, image_classification_obj_parameter
   
 if __name__ == '__main__':
   main()

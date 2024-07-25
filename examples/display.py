@@ -3,7 +3,15 @@ from vilib import Vilib
 import time
 
 def main():
-    Vilib.camera_start(vflip=False, hflip=False) # vflip:vertical flip, hflip:horizontal Flip
+    Vilib.camera_start(vflip=False, hflip=False, processes=1, camera_fps=60) # vflip:vertical flip, hflip:horizontal Flip
+    '''
+    Vilib.camera_start(vflip=False, hflip=False, processes=1, camera_fps=60)
+    
+    vflip: flip image vertically
+    hflip: flip image horizontally
+    processes: Number of image processing processes
+    camera_fps: picamera frame rate
+    '''
 
     Vilib.show_fps()
     '''

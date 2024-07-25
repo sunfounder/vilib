@@ -294,7 +294,8 @@ def traffic_sign_detect(img, model=None, labels=None, border_rgb=(255, 0, 0)):
         traffic_sign_obj_parameter['acc'] = 0
 
     # print(f'traffic_sign_num {traffic_sign_num}')
-    return img
+    return img, traffic_sign_obj_parameter
+
 
 
 # Test
