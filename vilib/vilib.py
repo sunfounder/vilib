@@ -19,7 +19,10 @@ os.environ['LIBCAMERA_LOG_LEVELS'] = '*:ERROR'
 import sys
 
 new_path = '/usr/local/lib/aarch64-linux-gnu/python3.12/site-packages/'
+new_path2 = '/usr/local/lib/aarch64-linux-gnu/'
 sys.path.append(new_path)
+sys.path.append(new_path2)
+print(sys.path)
 import libcamera
 
 from picamera2 import Picamera2
