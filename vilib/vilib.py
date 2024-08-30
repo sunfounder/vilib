@@ -2,7 +2,6 @@
 
 # whther print welcome message
 import os
-import logging
 
 from .version import __version__
 if 'VILIB_WELCOME' not in os.environ or os.environ['VILIB_WELCOME'] not in [
@@ -29,14 +28,10 @@ from picamera2 import Picamera2
 
 import cv2
 import numpy as np
-from PIL import Image, ImageDraw, ImageFont
-
-from flask import Flask, render_template, Response
 
 import time
-import datetime
 import threading
-from multiprocessing import Process, Manager
+from multiprocessing import Process, Pool, Manager, Value, cpu_count
 
 from .utils import *
 
@@ -51,207 +46,79 @@ user_home = os.popen(f'getent passwd {user} | cut -d: -f 6').readline().strip()
 DEFAULLT_PICTURES_PATH = '%s/Pictures/vilib/'%user_home
 DEFAULLT_VIDEOS_PATH = '%s/Videos/vilib/'%user_home
 
-# utils
-# =================================================================
-def findContours(img):
-    _tuple = cv2.findContours(img, cv2.RETR_EXTERNAL,cv2.CHAIN_APPROX_SIMPLE)      
-    # compatible with opencv3.x and openc4.x
-    if len(_tuple) == 3:
-        _, contours, hierarchy = _tuple
-    else:
-        contours, hierarchy = _tuple
-    return contours, hierarchy
-
-# flask
-# =================================================================
-os.environ['FLASK_DEBUG'] = 'development'
-app = Flask(__name__)
-
-log = logging.getLogger('werkzeug')
-log.setLevel(logging.ERROR)
-
-@app.route('/')
-def index():
-    """Video streaming home page."""
-    return render_template('index.html')
-
-def get_frame():
-    return cv2.imencode('.jpg', Vilib.flask_img)[1].tobytes()
-
-def get_qrcode_pictrue():
-    return cv2.imencode('.jpg', Vilib.flask_img)[1].tobytes()
-
-def get_png_frame():
-    return cv2.imencode('.png', Vilib.flask_img)[1].tobytes()
-
-def get_qrcode():
-    while Vilib.qrcode_img_encode is None:
-         time.sleep(0.2)
-
-    return Vilib.qrcode_img_encode
-
-def gen():
-    """Video streaming generator function."""
-    while True:  
-        # start_time = time.time()
-        frame = get_frame()
-        yield (b'--frame\r\n'
-               b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
-        time.sleep(0.03)
-        # end_time = time.time() - start_time
-        # print('flask fps:%s'%int(1/end_time))
-
-@app.route('/mjpg') ## video
-def video_feed():
-    # from camera import Camera
-    """Video streaming route. Put this in the src attribute of an img tag."""
-    if Vilib.web_display_flag:
-        response = Response(gen(),
-                        mimetype='multipart/x-mixed-replace; boundary=frame') 
-        response.headers.add("Access-Control-Allow-Origin", "*")
-        return response
-    else:
-        tip = '''
-    Please enable web display first:
-        Vilib.display(web=True)
-'''
-        html = f"<html><style>p{{white-space: pre-wrap;}}</style><body><p>{tip}</p></body></html>"
-        return Response(html, mimetype='text/html')
-
-@app.route('/mjpg.jpg')  # jpg
-def video_feed_jpg():
-    # from camera import Camera
-    """Video streaming route. Put this in the src attribute of an img tag."""
-    response = Response(get_frame(), mimetype="image/jpeg")
-    response.headers.add("Access-Control-Allow-Origin", "*")
-    return response
-
-@app.route('/mjpg.png')  # png
-def video_feed_png():
-    # from camera import Camera
-    """Video streaming route. Put this in the src attribute of an img tag."""
-    response = Response(get_png_frame(), mimetype="image/png")
-    response.headers.add("Access-Control-Allow-Origin", "*")
-    return response
-
-@app.route("/qrcode")
-def qrcode_feed():
-    qrcode_html = '''
-<!DOCTYPE html>
-<html>
-<head>
-    <title>QRcode</title>
-    <script>
-        function refreshQRCode() {
-            var imgElement = document.getElementById('qrcode-img');
-            imgElement.src = '/qrcode.png?' + new Date().getTime();  // Add timestamp to avoid caching
-        }
-        var refreshInterval = 500;  // 2s
-
-        window.onload = function() {
-            refreshQRCode(); 
-            setInterval(refreshQRCode, refreshInterval);
-        };
-    </script>
-</head>
-<body>
-    <img id="qrcode-img" src="/qrcode.png" alt="QR Code" />
-</body>
-</html>
-'''
-    return Response(qrcode_html, mimetype='text/html')
-
-
-@app.route("/qrcode.png")
-def qrcode_feed_png():
-    """Video streaming route. Put this in the src attribute of an img tag."""
-    if Vilib.web_qrcode_flag:
-        # response = Response(get_qrcode(),
-        #                 mimetype='multipart/x-mixed-replace; boundary=frame')
-        response = Response(get_qrcode(), mimetype="image/png")
-        response.headers.add("Access-Control-Allow-Origin", "*")
-        return response
-    else:
-        tip = '''
-    Please enable web display first:
-        Vilib.display_qrcode(web=True)
-'''
-        html = f"<html><style>p{{white-space: pre-wrap;}}</style><body><p>{tip}</p></body></html>"
-        return Response(html, mimetype='text/html')
-
-def web_camera_start():
-    try:
-        Vilib.flask_start = True
-        app.run(host='0.0.0.0', port=9000, threaded=True, debug=False)
-    except Exception as e:
-        print(e)
-
 # Vilib
 # =================================================================
 class Vilib(object):
 
     camera_vflip = False
     camera_hflip = False
+
     camera_run = False
+    camera_has_start = False
 
-    flask_thread = None
+    processes = 1 # number of processes
+    camera_fps = 60
+
     camera_thread = None
-    flask_start = False
-
-    qrcode_display_thread = None
-    qrcode_making_completed = False
-    qrcode_img = Manager().list(range(1))
-    qrcode_img_encode = None
-    qrcode_win_name = 'qrcode'
+    flask_thread = None
 
     img = Manager().list(range(1))
-    flask_img = Manager().list(range(1))
 
     Windows_Name = "picamera"
     imshow_flag = False
     web_display_flag = False
+
+    qrcode_win_name = 'qrcode'
     imshow_qrcode_flag = False
     web_qrcode_flag = False
 
-    draw_fps = False
+    draw_fps_sw = False
     fps_origin = (640-105, 20)
     fps_size = 0.6
     fps_color = (255, 255, 255)
 
     detect_obj_parameter = {}
-    color_detect_color = None
-    face_detect_sw = False
-    hands_detect_sw = False
-    pose_detect_sw = False
-    image_classify_sw = False
-    image_classification_model = None
-    image_classification_labels = None
-    objects_detect_sw = False
-    objects_detection_model = None
-    objects_detection_labels = None
-    qrcode_detect_sw = False
-    traffic_detect_sw = False
+    color_obj_parameter = {}
+    color_detect_color = Manager().Value(str, None)
+    face_detect_sw = Value('b', False)
+    hands_detect_sw = Value('b', False)
+    pose_detect_sw = Value('b', False)
+    image_classify_sw = Value('b', False)
+    image_classification_model = Manager().Value(str, None)
+    image_classification_labels = Manager().Value(str, None)
+    objects_detect_sw = Value('b', False)
+    objects_detection_model = Manager().Value(str, None)
+    objects_detection_labels = Manager().Value(str, None)
+    qrcode_detect_sw = Value('b', False)
+    traffic_detect_sw = Value('b', False)
+
+    qrcode_display_thread = None
+    qrcode_making_completed = False
+    qrcode_img = Manager().list(range(1))
+    qrcode_img_encode = None
+
+    web_display = None
 
     @staticmethod
     def camera():
-        # init picamera
-        picam2 = Picamera2()
-
-        preview_config = picam2.preview_configuration
-        # preview_config.size = (800, 600)
-        preview_config.size = (640, 480)
-        preview_config.format = 'RGB888'  # 'XRGB8888', 'XBGR8888', 'RGB888', 'BGR888', 'YUV420'
-        preview_config.transform = libcamera.Transform(
-                                        hflip=Vilib.camera_hflip ,
-                                        vflip=Vilib.camera_vflip
-                                    )
-        preview_config.colour_space = libcamera.ColorSpace.Sycc()
-        preview_config.buffer_count = 4
-        preview_config.queue = True
-        # preview_config.raw = {'size': (2304, 1296)}
-        preview_config.controls = {'FrameRate': 60} # change picam2.capture_array() takes time
-
+        # --- init picamera2 ---
         try:
+            picam2 = Picamera2()
+
+            preview_config = picam2.preview_configuration
+            # preview_config.size = (800, 600)
+            preview_config.size = (640, 480)
+            preview_config.format = 'RGB888'  # 'XRGB8888', 'XBGR8888', 'RGB888', 'BGR888', 'YUV420'
+            preview_config.transform = libcamera.Transform(
+                                            hflip=Vilib.camera_hflip ,
+                                            vflip=Vilib.camera_vflip
+                                        )
+            preview_config.colour_space = libcamera.ColorSpace.Sycc()
+            preview_config.buffer_count = 4
+            preview_config.queue = True
+            # preview_config.raw = {'size': (2304, 1296)}
+            preview_config.controls = {'FrameRate': Vilib.camera_fps} # change picam2.capture_array() takes time
+
             picam2.start()
         except Exception as e:
             print(f"\033[38;5;1mError:\033[0m\n{e}")
@@ -263,29 +130,61 @@ class Vilib(object):
         fps = 0
         start_time = 0
         framecount = 0
+
         try:
             start_time = time.time()
+
+            print(f'Image processing process number: {Vilib.processes}')
+
+            if Vilib.processes > 1:
+                # ------- start pool ----
+                def pool_init_worker():
+                    import signal
+                    signal.signal(signal.SIGINT, signal.SIG_IGN)
+
+                pool = Pool(processes=Vilib.processes, initializer=pool_init_worker)
+                process_list = []
+                pindex = 0
+                
+                # --- First fill of all processes ---
+                frame = picam2.capture_array()
+
+                for _ in range(Vilib.processes):
+                    _p = pool.apply_async(Vilib.img_process, [frame])
+                    process_list.append(_p) 
+
+            Vilib.camera_has_start = True
+
             while True:
                 # ----------- extract image data ----------------
-                # st = time.time()
-                Vilib.img = picam2.capture_array()
-                # print(f'picam2.capture_array(): {time.time() - st:.6f}')
-                # st = time.time()
+                frame = picam2.capture_array()
 
                 # ----------- image gains and effects ----------------
 
-                # ----------- image detection and recognition ----------------
-                Vilib.img = Vilib.color_detect_func(Vilib.img)
-                Vilib.img = Vilib.face_detect_func(Vilib.img)
-                Vilib.img = Vilib.traffic_detect_fuc(Vilib.img)
-                Vilib.img = Vilib.qrcode_detect_func(Vilib.img)
+                # ----------- apply new img_process, and draw fps on completed frame ----------------
+                # multi-process
+                # ==================
+                if Vilib.processes > 1: 
+                    process_list[pindex] = pool.apply_async(Vilib.img_process, [frame])
+                    
+                    pindex += 1
+                    if pindex > Vilib.processes - 1:
+                        pindex = 0 
+                    output_img, result = process_list[pindex].get()
 
-                Vilib.img = Vilib.image_classify_fuc(Vilib.img)
-                Vilib.img = Vilib.object_detect_fuc(Vilib.img)
-                Vilib.img = Vilib.hands_detect_fuc(Vilib.img)
-                Vilib.img = Vilib.pose_detect_fuc(Vilib.img)
+                # no multi-process
+                # ==================
+                else: 
+                    output_img, result =Vilib.img_process(frame)
 
-                # ----------- calculate fps and draw fps ----------------
+                # ----------- process result -----------
+                Vilib.img_process_result_copy(result)
+
+                # ----------- draw_fps & the final frame -----------
+                # this completed frame
+                Vilib.img = Vilib.draw_fps(output_img, fps)
+
+                # ----------- calculate fps ----------------
                 # calculate fps
                 framecount += 1
                 elapsed_time = float(time.time() - start_time)
@@ -293,28 +192,6 @@ class Vilib(object):
                     fps = round(framecount/elapsed_time, 1)
                     framecount = 0
                     start_time = time.time()
-
-                # print(f"elapsed_time: {elapsed_time}, fps: {fps}")
-
-                # draw fps
-                if Vilib.draw_fps:
-                    cv2.putText(
-                            # img, # image
-                            Vilib.img,
-                            f"FPS: {fps}", # text
-                            Vilib.fps_origin, # origin
-                            cv2.FONT_HERSHEY_SIMPLEX, # font
-                            Vilib.fps_size, # font_scale
-                            Vilib.fps_color, # font_color
-                            1, # thickness
-                            cv2.LINE_AA, # line_type: LINE_8 (default), LINE_4, LINE_AA
-                        )
-
-                # ---- copy img for flask --- 
-                # st = time.time()
-                Vilib.flask_img = Vilib.img
-                # print(f'vilib.flask_img: {time.time() - st:.6f}')
-
                 # ----------- display on desktop ----------------
                 if Vilib.imshow_flag == True:
                     try:
@@ -337,29 +214,137 @@ class Vilib(object):
                 if Vilib.camera_run == False:
                     break
 
-                # print(f'loop end: {time.time() - st:.6f}')
-                
         except KeyboardInterrupt as e:
             print(e)
         finally:
             print('camera close')
+            if Vilib.processes > 1:
+                pool.terminate()
             picam2.close()
             cv2.destroyAllWindows()
 
     @staticmethod
-    def camera_start(vflip=False, hflip=False):
-        Vilib.camera_hflip = hflip       
+    def camera_start(vflip=False, hflip=False, processes=1, camera_fps=60):
+        Vilib.camera_hflip = hflip
         Vilib.camera_vflip = vflip
+
+        if processes > cpu_count():
+            Vilib.processes = cpu_count()
+        elif processes < 0:
+            Vilib.processes = 1
+        else:
+            Vilib.processes = processes
+
+        if camera_fps < 10:
+            Vilib.camera_fps = 10
+        elif camera_fps > 90:
+            Vilib.camera_fps = 90
+
         Vilib.camera_run = True
         Vilib.camera_thread = threading.Thread(target=Vilib.camera, name="vilib")
         Vilib.camera_thread.daemon = False
         Vilib.camera_thread.start()
+        while not Vilib.camera_has_start:
+            pass
 
     @staticmethod
     def camera_close():
         if Vilib.camera_thread != None:
             Vilib.camera_run = False
             time.sleep(0.1)
+
+    @staticmethod
+    def img_process_result_copy(result):
+        if result['color'] != None:
+            Vilib.color_obj_parameter = result['color']
+            Vilib.detect_obj_parameter['color'] = Vilib.color_obj_parameter['color']
+            Vilib.detect_obj_parameter['color_x'] = Vilib.color_obj_parameter['x']
+            Vilib.detect_obj_parameter['color_y'] = Vilib.color_obj_parameter['y']
+            Vilib.detect_obj_parameter['color_w'] = Vilib.color_obj_parameter['w']
+            Vilib.detect_obj_parameter['color_h'] = Vilib.color_obj_parameter['h']
+            Vilib.detect_obj_parameter['color_n'] = Vilib.color_obj_parameter['n']
+            
+        if result['face'] != None:
+            Vilib.face_obj_parameter = result['face']
+            Vilib.detect_obj_parameter['human_x'] = Vilib.face_obj_parameter['x']
+            Vilib.detect_obj_parameter['human_y'] = Vilib.face_obj_parameter['y']
+            Vilib.detect_obj_parameter['human_w'] = Vilib.face_obj_parameter['w']
+            Vilib.detect_obj_parameter['human_h'] = Vilib.face_obj_parameter['h']
+            Vilib.detect_obj_parameter['human_n'] = Vilib.face_obj_parameter['n']
+
+        if result['traffic_sign'] != None:
+            Vilib.traffic_sign_obj_parameter = result['traffic_sign']
+            Vilib.detect_obj_parameter['traffic_sign_x'] = Vilib.traffic_sign_obj_parameter['x']
+            Vilib.detect_obj_parameter['traffic_sign_y'] = Vilib.traffic_sign_obj_parameter['y']
+            Vilib.detect_obj_parameter['traffic_sign_w'] = Vilib.traffic_sign_obj_parameter['w']
+            Vilib.detect_obj_parameter['traffic_sign_h'] = Vilib.traffic_sign_obj_parameter['h']
+            Vilib.detect_obj_parameter['traffic_sign_t'] = Vilib.traffic_sign_obj_parameter['t']
+            Vilib.detect_obj_parameter['traffic_sign_acc'] = Vilib.traffic_sign_obj_parameter['acc']
+
+        if result['qrcode'] != None:
+            Vilib.detect_obj_parameter['qr_x'] = Vilib.qrcode_obj_parameter['x']
+            Vilib.detect_obj_parameter['qr_y'] = Vilib.qrcode_obj_parameter['y']
+            Vilib.detect_obj_parameter['qr_w'] = Vilib.qrcode_obj_parameter['w']
+            Vilib.detect_obj_parameter['qr_h'] = Vilib.qrcode_obj_parameter['h']
+            Vilib.detect_obj_parameter['qr_data'] = Vilib.qrcode_obj_parameter['data']
+
+    @staticmethod
+    def img_process(img):
+        result = {}
+
+        img, color_obj_parameter = Vilib.color_detect_func(img)
+        img, face_obj_parameter = Vilib.face_detect_func(img)
+        img, traffic_sign_obj_parameter = Vilib.traffic_detect_fuc(img)
+        img, qrcode_obj_parameter = Vilib.qrcode_detect_func(img)
+        img, image_classification_obj_parameter = Vilib.image_classify_fuc(img)
+        img = Vilib.object_detect_fuc(img)
+        img, hands_obj_parametr = Vilib.hands_detect_fuc(img)
+        img = Vilib.pose_detect_fuc(img)
+
+        result['color'] = color_obj_parameter
+        result['face'] = face_obj_parameter
+        result['traffic_sign'] = traffic_sign_obj_parameter
+        result['qrcode'] = qrcode_obj_parameter
+        result['img_classification'] = image_classification_obj_parameter
+        result['hands'] = hands_obj_parametr
+
+        # print(result)
+        return img, result
+
+    @staticmethod
+    def draw_fps(img, fps):
+        if Vilib.draw_fps_sw:
+            cv2.putText(
+                    # img, # image
+                    img,
+                    f"FPS: {fps}", # text
+                    Vilib.fps_origin, # origin
+                    cv2.FONT_HERSHEY_SIMPLEX, # font
+                    Vilib.fps_size, # font_scale
+                    Vilib.fps_color, # font_color
+                    1, # thickness
+                    cv2.LINE_AA, # line_type: LINE_8 (default), LINE_4, LINE_AA
+                )
+        return img
+
+    # @staticmethod
+    # def draw_fps(img, fps):
+    #     if Vilib.draw_fps_sw:
+    #         blk = np.zeros(img.shape, np.uint8)  
+    #         cv2.rectangle(blk, (640-110, 2), (640-10, 24), (128, 128, 128), -1)
+    #         img = cv2.addWeighted(img, 1.0, blk, 0.5, 1)
+    #         cv2.putText(
+    #                 # img, # image
+    #                 img,
+    #                 f"FPS: {fps}", # text
+    #                 Vilib.fps_origin, # origin
+    #                 cv2.FONT_HERSHEY_SIMPLEX, # font
+    #                 Vilib.fps_size, # font_scale
+    #                 Vilib.fps_color, # font_color
+    #                 1, # thickness
+    #                 cv2.LINE_AA, # line_type: LINE_8 (default), LINE_4, LINE_AA
+    #             )
+    #     return img
 
     @staticmethod
     def display(local=True, web=True):
@@ -381,14 +366,17 @@ class Vilib(object):
                     ip = wlan0     
                 else:
                     ip = eth0
-                print(f'Web display on: http://{ip}:9000/mjpg\n')
+                print(f'\nWeb display on: http://{ip}:9000/mjpg\n')
 
                 # ----------- flask_thread ----------------
                 if Vilib.flask_thread == None or Vilib.flask_thread.is_alive() == False:
                     print('Starting web streaming ...')
-                    Vilib.flask_thread = threading.Thread(name='flask_thread',target=web_camera_start)
+                    from .web_display import WebDisplay
+                    web_display = WebDisplay(Vilib)
+                    Vilib.flask_thread = threading.Thread(name='flask_thread',target=web_display.web_camera_start)
                     Vilib.flask_thread.daemon = True
                     Vilib.flask_thread.start()
+                    time.sleep(0.05) # wait for flask thread to start
         else:
             print('Error: Please execute < camera_start() > first.')
 
@@ -401,11 +389,11 @@ class Vilib(object):
         if fps_origin is not None:
             Vilib.fps_origin = fps_origin
 
-        Vilib.draw_fps = True
+        Vilib.draw_fps_sw = True
 
     @staticmethod
     def hide_fps():
-        Vilib.draw_fps = False
+        Vilib.draw_fps_sw = False
 
     # take photo
     # =================================================================
@@ -507,41 +495,36 @@ class Vilib(object):
     @staticmethod 
     def color_detect(color="red"):
         '''
-        :param color: could be close, red, green, blue, yellow , orange, purple
+        :param color: could be red, green, blue, yellow , orange, purple
         '''
-        Vilib.color_detect_color = color
-        from .color_detection import color_detect_work, color_obj_parameter
-        Vilib.color_detect_work = color_detect_work
+        from .color_detection import color_obj_parameter
+        Vilib.color_detect_color.value = color
         Vilib.color_obj_parameter = color_obj_parameter
-        Vilib.detect_obj_parameter['color_x'] = Vilib.color_obj_parameter['x']
-        Vilib.detect_obj_parameter['color_y'] = Vilib.color_obj_parameter['y']
-        Vilib.detect_obj_parameter['color_w'] = Vilib.color_obj_parameter['w']
-        Vilib.detect_obj_parameter['color_h'] = Vilib.color_obj_parameter['h']
-        Vilib.detect_obj_parameter['color_n'] = Vilib.color_obj_parameter['n']
+        Vilib.color_obj_parameter['color'] = color
+        Vilib.detect_obj_parameter['color'] = color
 
     @staticmethod
     def color_detect_func(img):
-        if Vilib.color_detect_color is not None and Vilib.color_detect_color != 'close':
-            img = Vilib.color_detect_work(img, 640, 480, Vilib.color_detect_color)
-            Vilib.detect_obj_parameter['color_x'] = Vilib.color_obj_parameter['x']
-            Vilib.detect_obj_parameter['color_y'] = Vilib.color_obj_parameter['y']
-            Vilib.detect_obj_parameter['color_w'] = Vilib.color_obj_parameter['w']
-            Vilib.detect_obj_parameter['color_h'] = Vilib.color_obj_parameter['h']
-            Vilib.detect_obj_parameter['color_n'] = Vilib.color_obj_parameter['n']
-        return img
+        if Vilib.color_detect_color.value is not None and Vilib.color_detect_color.value != 'close':
+            from .color_detection import color_detect_work
+            img, color_obj_parameter = color_detect_work(img, 640, 480, Vilib.color_detect_color.value)
+            return img, color_obj_parameter
+        else:
+            return img, None
 
     @staticmethod
     def close_color_detection():
-        Vilib.color_detect_color = None
+        Vilib.color_detect_color.value = None
+        Vilib.color_obj_parameter['color'] = None
+        Vilib.detect_obj_parameter['color'] = None
 
   # face detection
     # =================================================================
     @staticmethod   
     def face_detect_switch(flag=False):
-        Vilib.face_detect_sw = flag
-        if Vilib.face_detect_sw:
+        Vilib.face_detect_sw.value = flag
+        if Vilib.face_detect_sw.value:
             from .face_detection import face_detect, set_face_detection_model, face_obj_parameter
-            Vilib.face_detect_work = face_detect
             Vilib.set_face_detection_model = set_face_detection_model
             Vilib.face_obj_parameter = face_obj_parameter
             Vilib.detect_obj_parameter['human_x'] = Vilib.face_obj_parameter['x']
@@ -552,23 +535,20 @@ class Vilib(object):
 
     @staticmethod
     def face_detect_func(img):
-        if Vilib.face_detect_sw:
-            img = Vilib.face_detect_work(img, 640, 480)
-            Vilib.detect_obj_parameter['human_x'] = Vilib.face_obj_parameter['x']
-            Vilib.detect_obj_parameter['human_y'] = Vilib.face_obj_parameter['y']
-            Vilib.detect_obj_parameter['human_w'] = Vilib.face_obj_parameter['w']
-            Vilib.detect_obj_parameter['human_h'] = Vilib.face_obj_parameter['h']
-            Vilib.detect_obj_parameter['human_n'] = Vilib.face_obj_parameter['n']
-        return img
+        if Vilib.face_detect_sw.value:
+            from .face_detection import face_detect
+            img, face_obj_parameter = face_detect(img, 640, 480)
+            return img, face_obj_parameter
+        else:
+            return img, None
 
    # traffic sign detection
     # =================================================================
     @staticmethod
     def traffic_detect_switch(flag=False):
-        Vilib.traffic_detect_sw  = flag
-        if Vilib.traffic_detect_sw:
+        Vilib.traffic_detect_sw.value  = flag
+        if Vilib.traffic_detect_sw.value:
             from .traffic_sign_detection import traffic_sign_detect, traffic_sign_obj_parameter
-            Vilib.traffic_detect_work = traffic_sign_detect
             Vilib.traffic_sign_obj_parameter = traffic_sign_obj_parameter
             Vilib.detect_obj_parameter['traffic_sign_x'] = Vilib.traffic_sign_obj_parameter['x']
             Vilib.detect_obj_parameter['traffic_sign_y'] = Vilib.traffic_sign_obj_parameter['y']
@@ -579,24 +559,20 @@ class Vilib(object):
 
     @staticmethod
     def traffic_detect_fuc(img):
-        if Vilib.traffic_detect_sw:
-            img = Vilib.traffic_detect_work(img, border_rgb=(255, 0, 0))
-            Vilib.detect_obj_parameter['traffic_sign_x'] = Vilib.traffic_sign_obj_parameter['x']
-            Vilib.detect_obj_parameter['traffic_sign_y'] = Vilib.traffic_sign_obj_parameter['y']
-            Vilib.detect_obj_parameter['traffic_sign_w'] = Vilib.traffic_sign_obj_parameter['w']
-            Vilib.detect_obj_parameter['traffic_sign_h'] = Vilib.traffic_sign_obj_parameter['h']
-            Vilib.detect_obj_parameter['traffic_sign_t'] = Vilib.traffic_sign_obj_parameter['t']
-            Vilib.detect_obj_parameter['traffic_sign_acc'] = Vilib.traffic_sign_obj_parameter['acc']
-        return img
+        if Vilib.traffic_detect_sw.value:
+            from .traffic_sign_detection import traffic_sign_detect
+            img, traffic_sign_obj_parameter = traffic_sign_detect(img, border_rgb=(255, 0, 0))
+            return img, traffic_sign_obj_parameter
+        else:
+            return img, None
 
     # qrcode recognition
     # =================================================================
     @staticmethod
     def qrcode_detect_switch(flag=False):
-        Vilib.qrcode_detect_sw  = flag
-        if Vilib.qrcode_detect_sw:
-            from .qrcode_recognition import qrcode_recognize, qrcode_obj_parameter
-            Vilib.qrcode_recognize = qrcode_recognize
+        Vilib.qrcode_detect_sw.value = flag
+        if Vilib.qrcode_detect_sw.value:
+            from .qrcode_recognition import qrcode_obj_parameter
             Vilib.qrcode_obj_parameter = qrcode_obj_parameter
             Vilib.detect_obj_parameter['qr_x'] = Vilib.qrcode_obj_parameter['x']
             Vilib.detect_obj_parameter['qr_y'] = Vilib.qrcode_obj_parameter['y']
@@ -606,14 +582,12 @@ class Vilib(object):
 
     @staticmethod
     def qrcode_detect_func(img):
-        if Vilib.qrcode_detect_sw:
-            img = Vilib.qrcode_recognize(img, border_rgb=(255, 0, 0))
-            Vilib.detect_obj_parameter['qr_x'] = Vilib.qrcode_obj_parameter['x']
-            Vilib.detect_obj_parameter['qr_y'] = Vilib.qrcode_obj_parameter['y']
-            Vilib.detect_obj_parameter['qr_w'] = Vilib.qrcode_obj_parameter['w']
-            Vilib.detect_obj_parameter['qr_h'] = Vilib.qrcode_obj_parameter['h']
-            Vilib.detect_obj_parameter['qr_data'] = Vilib.qrcode_obj_parameter['data']
-        return img
+        if Vilib.qrcode_detect_sw.value:
+            from .qrcode_recognition import qrcode_recognize
+            img, qrcode_obj_parameter = qrcode_recognize(img, border_rgb=(255, 0, 0))
+            return img, qrcode_obj_parameter
+        else:
+            return img, None
 
     # qrcode making
     # =================================================================
@@ -729,16 +703,18 @@ class Vilib(object):
         if Vilib.image_classify_sw == True:
             # print('classify_image starting')
             from .image_classification import classify_image
-            img = classify_image(image=img,
+            img, image_classification_obj_parameter = classify_image(image=img,
                                 model=Vilib.image_classification_model,
                                 labels=Vilib.image_classification_labels)   
-        return img
+            return img, image_classification_obj_parameter
+        else:
+            return img, None
 
     # objects detection
     # =================================================================
     @staticmethod
     def object_detect_switch(flag=False):
-        Vilib.objects_detect_sw = flag
+        Vilib.objects_detect_sw.value = flag
 
     @staticmethod
     def object_detect_set_model(path):
@@ -754,12 +730,11 @@ class Vilib(object):
 
     @staticmethod
     def object_detect_fuc(img):
-        if Vilib.objects_detect_sw == True:
-            # print('detect_objects starting')
+        if Vilib.objects_detect_sw.value == True:
             from .objects_detection import detect_objects
             img = detect_objects(image=img,
                                 model=Vilib.objects_detection_model,
-                                labels=Vilib.objects_detection_labels)   
+                                labels=Vilib.objects_detection_labels)
         return img
 
     # hands detection
@@ -772,9 +747,12 @@ class Vilib(object):
 
     @staticmethod
     def hands_detect_fuc(img):
-        if Vilib.hands_detect_sw == True:
-            img, Vilib.detect_obj_parameter['hands_joints'] = Vilib.detect_hands.work(image=img)   
-        return img
+        if Vilib.hands_detect_sw.value == True:
+            from .hands_detection import DetectHands
+            img, hands_obj_parametr = DetectHands(max_num_hands=2).work(img)   
+            return img, hands_obj_parametr
+        else:
+            return img, None
 
     # pose detection
     # =================================================================
@@ -786,6 +764,7 @@ class Vilib(object):
 
     @staticmethod
     def pose_detect_fuc(img):
-        if Vilib.pose_detect_sw == True:
-            img, Vilib.detect_obj_parameter['body_joints'] = Vilib.pose_detect.work(image=img)   
+        if Vilib.pose_detect_sw.value == True:
+            from .pose_detection import DetectPose
+            img, Vilib.detect_obj_parameter['body_joints'] = DetectPose().work(image=img)   
         return img
