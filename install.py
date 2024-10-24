@@ -67,7 +67,7 @@ def working_tip():
     sys.stdout.flush()  
 
 def do(msg="", cmd=""):
-    print(" - %s... " % (msg), end='', flush=True)
+    print(" - %s ... " % (msg), end='', flush=True)
     # at_work_tip start 
     global at_work_tip_sw
     at_work_tip_sw = True
