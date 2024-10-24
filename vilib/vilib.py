@@ -513,7 +513,9 @@ class Vilib(object):
 
     @staticmethod
     def color_detect_func(img):
-        if Vilib.color_detect_color is not None and Vilib.color_detect_color != 'close':
+        if Vilib.color_detect_color is not None \
+            and Vilib.color_detect_color != 'close' \
+            and hasattr(Vilib, "color_detect_work"):
             img = Vilib.color_detect_work(img, 640, 480, Vilib.color_detect_color)
             Vilib.detect_obj_parameter['color_x'] = Vilib.color_obj_parameter['x']
             Vilib.detect_obj_parameter['color_y'] = Vilib.color_obj_parameter['y']
@@ -544,7 +546,7 @@ class Vilib(object):
 
     @staticmethod
     def face_detect_func(img):
-        if Vilib.face_detect_sw:
+        if Vilib.face_detect_sw and hasattr(Vilib, "face_detect_work"):
             img = Vilib.face_detect_work(img, 640, 480)
             Vilib.detect_obj_parameter['human_x'] = Vilib.face_obj_parameter['x']
             Vilib.detect_obj_parameter['human_y'] = Vilib.face_obj_parameter['y']
@@ -571,7 +573,7 @@ class Vilib(object):
 
     @staticmethod
     def traffic_detect_fuc(img):
-        if Vilib.traffic_detect_sw:
+        if Vilib.traffic_detect_sw and hasattr(Vilib, "traffic_detect_work"):
             img = Vilib.traffic_detect_work(img, border_rgb=(255, 0, 0))
             Vilib.detect_obj_parameter['traffic_sign_x'] = Vilib.traffic_sign_obj_parameter['x']
             Vilib.detect_obj_parameter['traffic_sign_y'] = Vilib.traffic_sign_obj_parameter['y']
@@ -599,7 +601,7 @@ class Vilib(object):
 
     @staticmethod
     def qrcode_detect_func(img):
-        if Vilib.qrcode_detect_sw:
+        if Vilib.qrcode_detect_sw and hasattr(Vilib, "qrcode_recognize"):
             img = Vilib.qrcode_recognize(img, border_rgb=(255, 0, 0))
             Vilib.detect_obj_parameter['qr_x'] = Vilib.qrcode_obj_parameter['x']
             Vilib.detect_obj_parameter['qr_y'] = Vilib.qrcode_obj_parameter['y']
@@ -782,6 +784,6 @@ class Vilib(object):
 
     @staticmethod
     def pose_detect_fuc(img):
-        if Vilib.pose_detect_sw == True:
+        if Vilib.pose_detect_sw == True and hasattr(Vilib, "pose_detect"):
             img, Vilib.detect_obj_parameter['body_joints'] = Vilib.pose_detect.work(image=img)   
         return img
