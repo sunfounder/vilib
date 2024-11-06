@@ -2,6 +2,9 @@
 from time import sleep,strftime,localtime
 from vilib import Vilib
 import readchar 
+import os
+
+user_name = os.getlogin()
 
 manual = '''
 Press keys on keyboard to control recording:
@@ -17,7 +20,7 @@ def print_overwrite(msg,  end='', flush=True):
 def main():
     rec_flag = 'stop' # start,pause,stop
     vname = None
-    Vilib.rec_video_set["path"] = "/home/pi/Videos/" # set path
+    Vilib.rec_video_set["path"] = f"/home/{user_name}/Videos/" # set path
 
     Vilib.camera_start(vflip=False,hflip=False) 
     Vilib.display(local=True,web=True)

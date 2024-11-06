@@ -1,12 +1,15 @@
 #!/usr/bin/env python3
 import time
 from vilib import Vilib
+import os
+
+user_name = os.getlogin()
 
 def main():
     Vilib.camera_start(vflip=False,hflip=False)
     Vilib.display(local=True,web=True)
 
-    path = "/home/pi/Pictures/vilib/photos"
+    path = f"/home/{user_name}/Pictures/vilib/photos"
   
     while True:
         if input() == 'q': 
