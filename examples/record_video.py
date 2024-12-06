@@ -22,9 +22,10 @@ def main():
     vname = None
     Vilib.rec_video_set["path"] = f"/home/{user_name}/Videos/" # set path
 
-    Vilib.camera_start(vflip=False,hflip=False) 
+    Vilib.camera_start(vflip=False, hflip=False, size=(1280, 720)) # default size = (640, 480)
     Vilib.display(local=True,web=True)
     sleep(0.8)  # wait for startup
+    Vilib.rec_video_set["framesize"] = (1280, 720)
 
     print(manual)
     while True:
