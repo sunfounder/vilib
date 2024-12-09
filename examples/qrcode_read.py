@@ -14,7 +14,7 @@ Vilib.qrcode_obj_parameter['data']    # recognition result
 '''
 
 def main():
-    Vilib.camera_start(vflip=False, hflip=False)
+    Vilib.camera_start(vflip=False, hflip=False) # size=(640, 480)
     Vilib.show_fps()
     Vilib.display(local=True, web=True)
     Vilib.qrcode_detect_switch(True)

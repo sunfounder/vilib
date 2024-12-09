@@ -6,7 +6,7 @@ import os
 user_name = os.getlogin()
 
 def main():
-    Vilib.camera_start(vflip=False,hflip=False)
+    Vilib.camera_start(vflip=False, hflip=False, size=(1280, 720))
     Vilib.display(local=True,web=True)
 
     path = f"/home/{user_name}/Pictures/vilib/photos"

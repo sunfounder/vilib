@@ -3,7 +3,8 @@ from vilib import Vilib
 import time
 
 def main():
-    Vilib.camera_start(vflip=False, hflip=False) # vflip:vertical flip, hflip:horizontal Flip
+    # Vilib.camera_start(vflip=False, hflip=False) # vflip:vertical flip, hflip:horizontal Flip, size=(640, 480)
+    Vilib.camera_start(vflip=False, hflip=False, size=(1280, 720))
 
     Vilib.show_fps()
     '''

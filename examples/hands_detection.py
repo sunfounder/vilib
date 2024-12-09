@@ -3,7 +3,7 @@ from time import sleep
 from vilib import Vilib
 
 def main():
-    Vilib.camera_start(vflip=False, hflip=False)
+    Vilib.camera_start(vflip=False, hflip=False) # size=(640, 480)
     Vilib.show_fps()
     Vilib.display(local=True, web=True)
     Vilib.hands_detect_switch(True)
