@@ -182,6 +182,8 @@ def web_camera_start():
 class Vilib(object):
 
     camera_size = (640, 480)
+    camera_width = 640
+    camera_height = 480
     camera_vflip = False
     camera_hflip = False
     camera_run = False
@@ -206,7 +208,7 @@ class Vilib(object):
     web_qrcode_flag = False
 
     draw_fps = False
-    fps_origin = (640-105, 20)
+    fps_origin = (camera_width-105, 20)
     fps_size = 0.6
     fps_color = (255, 255, 255)
 
@@ -226,6 +228,9 @@ class Vilib(object):
 
     @staticmethod
     def camera():
+        Vilib.camera_width = Vilib.camera_size[0]
+        Vilib.camera_height = Vilib.camera_size[1]
+
         # init picamera
         picam2 = Picamera2()
 
@@ -252,6 +257,7 @@ class Vilib(object):
                 )
             exit(1)
         
+        Vilib.fps_origin = (Vilib.camera_width-105, 20)
         fps = 0
         start_time = 0
         framecount = 0
@@ -339,8 +345,9 @@ class Vilib(object):
             cv2.destroyAllWindows()
 
     @staticmethod
-    def camera_start(vflip=False, hflip=False, size=(640, 480)):
-        Vilib.camera_size = size
+    def camera_start(vflip=False, hflip=False, size=None):
+        if size is not None:
+            Vilib.camera_size = size
         Vilib.camera_hflip = hflip
         Vilib.camera_vflip = vflip
         Vilib.camera_run = True
@@ -518,7 +525,7 @@ class Vilib(object):
         if Vilib.color_detect_color is not None \
             and Vilib.color_detect_color != 'close' \
             and hasattr(Vilib, "color_detect_work"):
-            img = Vilib.color_detect_work(img, Vilib.camera_size[0], Vilib.camera_size[1], Vilib.color_detect_color)
+            img = Vilib.color_detect_work(img, Vilib.camera_width, Vilib.camera_height, Vilib.color_detect_color)
             Vilib.detect_obj_parameter['color_x'] = Vilib.color_obj_parameter['x']
             Vilib.detect_obj_parameter['color_y'] = Vilib.color_obj_parameter['y']
             Vilib.detect_obj_parameter['color_w'] = Vilib.color_obj_parameter['w']
@@ -549,7 +556,7 @@ class Vilib(object):
     @staticmethod
     def face_detect_func(img):
         if Vilib.face_detect_sw and hasattr(Vilib, "face_detect_work"):
-            img = Vilib.face_detect_work(img, Vilib.camera_size[0], Vilib.camera_size[1])
+            img = Vilib.face_detect_work(img, Vilib.camera_width, Vilib.camera_height)
             Vilib.detect_obj_parameter['human_x'] = Vilib.face_obj_parameter['x']
             Vilib.detect_obj_parameter['human_y'] = Vilib.face_obj_parameter['y']
             Vilib.detect_obj_parameter['human_w'] = Vilib.face_obj_parameter['w']
