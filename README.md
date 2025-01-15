@@ -29,7 +29,7 @@ Download this repository to your Raspberry Pi:
 
 ```bash
 cd ~
-git clone -b picamera2 https://github.com/sunfounder/vilib.git
+git clone -b picamera2 https://github.com/sunfounder/vilib.git --depth 1
 ```
 
 Install
@@ -59,6 +59,6 @@ SunFounder is a technology company focused on Raspberry Pi and Arduino open sour
 ## Contact us
 
 E-mail:
-    service@sunfounder.com
+    <service@sunfounder.com>
 
 [CHANGELOG]:https://github.com/sunfounder/vilib/blob/master/CHANGELOG.md
