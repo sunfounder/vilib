@@ -1,0 +1,40 @@
+[build-system]
+requires = ["setuptools>=61.0.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "vilib"
+authors = [
+  {name="SunFounder", email="service@sunfounder.com" },
+]
+description = "Vision Library for Raspberry Pi"
+readme = "README.md"
+requires-python = ">=3.7"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+    "Operating System :: POSIX :: Linux",
+]
+keywords = ["vilib", "sunfounder", "opencv", "image process", "visual process", "sunfounder"]
+dynamic = ["version"]
+
+dependencies = [
+]
+
+[tool.setuptools]
+packages = ["vilib"]
+
+[project.scripts]
+
+[project.urls]
+"Homepage" = "https://github.com/sunfounder/vilib"
+"Bug Tracker" = "https://github.com/sunfounder/vilib/issues"
+
+#[tool.setuptools.packages.find]
+#include = ["vilib"]
+#exclude = ["setup.py", "docs", 'tests*', 'examples', 'workspace']
+
+[tool.setuptools.dynamic]
+version = {attr = "vilib.version.__version__"}
+
+

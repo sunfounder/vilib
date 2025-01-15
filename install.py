@@ -267,8 +267,10 @@ def install():
         + f' && chown -R {user_name}:{user_name} /opt/vilib/*'
         )
     print("Install vilib python package")
-    do(msg="run setup file",
-        cmd='python3 setup.py install')
+    # do(msg="run setup file",
+    #     cmd='python3 setup.py install')
+    do(msg="pip3 install ./",
+        cmd=f'pip3 install ./ {_is_bsps}')
     do(msg="cleanup",
         cmd='rm -rf vilib.egg-info')
 
