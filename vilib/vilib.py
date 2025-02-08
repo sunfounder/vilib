@@ -38,6 +38,9 @@ user_home = os.popen(f'getent passwd {user} | cut -d: -f 6').readline().strip()
 # print(f"user: {user}")
 # print(f"user_home: {user_home}")
 
+# init picamera2 reference
+pi_camera_2 = None
+
 # Default path for pictures and videos
 DEFAULLT_PICTURES_PATH = '%s/Pictures/vilib/'%user_home
 DEFAULLT_VIDEOS_PATH = '%s/Videos/vilib/'%user_home
@@ -226,13 +229,22 @@ class Vilib(object):
     qrcode_detect_sw = False
     traffic_detect_sw = False
 
+    def get_instance():
+        global pi_camera_2
+        return pi_camera_2
+        
+        
     @staticmethod
     def camera():
+        global pi_camera_2
         Vilib.camera_width = Vilib.camera_size[0]
         Vilib.camera_height = Vilib.camera_size[1]
 
         # init picamera
         picam2 = Picamera2()
+
+        # set global reference
+        pi_camera_2 = picam2
 
         preview_config = picam2.preview_configuration
         # preview_config.size = (800, 600)
