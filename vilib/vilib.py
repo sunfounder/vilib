@@ -228,7 +228,8 @@ class Vilib(object):
     objects_detection_labels = None
     qrcode_detect_sw = False
     traffic_detect_sw = False
-
+        
+    @staticmethod        
     def get_instance():
         global pi_camera_2
         return pi_camera_2
