@@ -7,7 +7,11 @@ import threading
 # version
 # =================================================================
 sys.path.append('./vilib')
-user_name = os.getlogin()
+
+import pwd
+owner_uid = os.stat(__file__).st_uid
+user_name = pwd.getpwuid(owner_uid).pw_name
+
 from version import __version__
 print("Start installing vilib %s for user %s"%(__version__ ,user_name))
 
@@ -214,6 +218,20 @@ def install():
             print(usage)
             sys.exit(0)
 
+    # check whether pip has the option "--break-system-packages"
+    _is_bsps = ''
+    status, _ = run_command("pip3 help install|grep break-system-packages")
+    if status == 0:
+        _is_bsps = "--break-system-packages"
+
+    print("Install vilib python package")
+    # do(msg="run setup file",
+    #     cmd='python3 setup.py install')
+    do(msg="pip3 install ./",
+        cmd=f'pip3 install ./ {_is_bsps}')
+    do(msg="cleanup",
+        cmd='rm -rf vilib.egg-info')
+
     if "--no-dep" not in options:
         # install dependencies with apt
         # ===================================
@@ -229,11 +247,8 @@ def install():
         # install dependencies with pip
         # ===================================
         print("pip3 install dependency:")
-        # check whether pip has the option "--break-system-packages"
-        _is_bsps = ''
-        status, _ = run_command("pip3 help install|grep break-system-packages")
-        if status == 0: # if true
-            _is_bsps = "--break-system-packages"
+
+        if _is_bsps != '': # if true
             print("\033[38;5;8m pip3 install with --break-system-packages\033[0m")
         # update pip
         do(msg="update pip3",
@@ -266,13 +281,6 @@ def install():
         + ' && chmod 774 /opt/vilib/*'
         + f' && chown -R {user_name}:{user_name} /opt/vilib/*'
         )
-    print("Install vilib python package")
-    # do(msg="run setup file",
-    #     cmd='python3 setup.py install')
-    do(msg="pip3 install ./",
-        cmd=f'pip3 install ./ {_is_bsps}')
-    do(msg="cleanup",
-        cmd='rm -rf vilib.egg-info')
 
     # check errors
     if len(errors) == 0:
