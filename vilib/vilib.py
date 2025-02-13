@@ -38,9 +38,6 @@ user_home = os.popen(f'getent passwd {user} | cut -d: -f 6').readline().strip()
 # print(f"user: {user}")
 # print(f"user_home: {user_home}")
 
-# init picamera2 reference
-pi_camera_2 = None
-
 # Default path for pictures and videos
 DEFAULLT_PICTURES_PATH = '%s/Pictures/vilib/'%user_home
 DEFAULLT_VIDEOS_PATH = '%s/Videos/vilib/'%user_home
@@ -184,6 +181,8 @@ def web_camera_start():
 # =================================================================
 class Vilib(object):
 
+    picam2 = Picamera2()
+
     camera_size = (640, 480)
     camera_width = 640
     camera_height = 480
@@ -229,30 +228,31 @@ class Vilib(object):
     qrcode_detect_sw = False
     traffic_detect_sw = False
         
-    @staticmethod        
+    @staticmethod
     def get_instance():
-        global pi_camera_2
-        return pi_camera_2
-        
-        
+        return Vilib.picam2
+
+    @staticmethod
+    def set_controls(controls):
+        Vilib.picam2.set_controls(controls)
+
+    @staticmethod
+    def get_controls():
+        return Vilib.picam2.capture_metadata()
+
     @staticmethod
     def camera():
-        global pi_camera_2
         Vilib.camera_width = Vilib.camera_size[0]
         Vilib.camera_height = Vilib.camera_size[1]
 
-        # init picamera
-        picam2 = Picamera2()
-
-        # set global reference
-        pi_camera_2 = picam2
+        picam2 = Vilib.picam2
 
         preview_config = picam2.preview_configuration
         # preview_config.size = (800, 600)
         preview_config.size = Vilib.camera_size
         preview_config.format = 'RGB888'  # 'XRGB8888', 'XBGR8888', 'RGB888', 'BGR888', 'YUV420'
         preview_config.transform = libcamera.Transform(
-                                        hflip=Vilib.camera_hflip ,
+                                        hflip=Vilib.camera_hflip,
                                         vflip=Vilib.camera_vflip
                                     )
         preview_config.colour_space = libcamera.ColorSpace.Sycc()
@@ -269,7 +269,7 @@ class Vilib(object):
                 "You can use the \"libcamea-hello\" command to test the camera"
                 )
             exit(1)
-        
+        Vilib.camera_run = True
         Vilib.fps_origin = (Vilib.camera_width-105, 20)
         fps = 0
         start_time = 0
@@ -363,10 +363,11 @@ class Vilib(object):
             Vilib.camera_size = size
         Vilib.camera_hflip = hflip
         Vilib.camera_vflip = vflip
-        Vilib.camera_run = True
         Vilib.camera_thread = threading.Thread(target=Vilib.camera, name="vilib")
         Vilib.camera_thread.daemon = False
         Vilib.camera_thread.start()
+        while not Vilib.camera_run:
+            time.sleep(0.1)
 
     @staticmethod
     def camera_close():
