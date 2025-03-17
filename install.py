@@ -150,6 +150,7 @@ APT_INSTALL_LIST = [
     "python3-libcamera",
     # install python3-picamera2: https://datasheets.raspberrypi.com/camera/picamera2-manual.pdf
     "python3-picamera2",
+    "rpicam-apps",
     "python3-pyqt5",
     "python3-opengl",
     # install python3-opencv: # https://qengineering.eu/install-opencv-4.5-on-raspberry-64-os.html
