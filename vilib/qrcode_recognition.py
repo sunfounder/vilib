@@ -81,4 +81,10 @@ def qrcode_recognize(img, border_rgb=(255, 0, 0), font_color=(0, 0, 255)):
 
         return img
     else:
+        qrcode_obj_parameter['data'] = "None"
+        qrcode_obj_parameter['x'] = 0
+        qrcode_obj_parameter['y'] = 0
+        qrcode_obj_parameter['w'] = 0
+        qrcode_obj_parameter['h'] = 0
+        qrcode_obj_parameter['list'] = []
         return img
