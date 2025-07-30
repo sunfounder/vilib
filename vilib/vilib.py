@@ -353,7 +353,6 @@ class Vilib(object):
         except KeyboardInterrupt as e:
             print(e)
         finally:
-            print('camera close')
             picam2.close()
             cv2.destroyAllWindows()
 
