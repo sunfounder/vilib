@@ -329,6 +329,14 @@ class Vilib(object):
                 # ----------- display on desktop ----------------
                 if Vilib.imshow_flag == True:
                     try:
+                        try:
+                            prop = cv2.getWindowProperty(Vilib.Windows_Name, cv2.WND_PROP_VISIBLE)
+                            qrcode_prop = cv2.getWindowProperty(Vilib.qrcode_win_name, cv2.WND_PROP_VISIBLE)
+                            if prop < 1 or qrcode_prop < 1:
+                                break
+                        except:
+                            pass
+
                         cv2.imshow(Vilib.Windows_Name, Vilib.img)
 
                         if Vilib.imshow_qrcode_flag and Vilib.qrcode_making_completed:
@@ -336,8 +344,6 @@ class Vilib(object):
                                 cv2.imshow(Vilib.qrcode_win_name, Vilib.qrcode_img)
 
                         cv2.waitKey(1)
-                        if cv2.getWindowProperty(Vilib.Windows_Name, cv2.WND_PROP_VISIBLE) == 0:
-                            cv2.destroyWindow(Vilib.Windows_Name)
 
                     except Exception as e:
                         Vilib.imshow_flag = False
