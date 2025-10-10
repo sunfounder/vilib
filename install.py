@@ -170,9 +170,6 @@ APT_INSTALL_LIST = [
     "libvdpau1", 
     "libharfbuzz0b", 
     "libbluray2", 
-    "libatlas-base-dev",
-    "libhdf5-103",
-    # "libopenexr25",
     "libzbar0",
     "libopenblas-dev",
 ]
@@ -180,7 +177,6 @@ APT_INSTALL_LIST = [
 # Dependencies list installed with pip3
 # =================================================================
 PIP_INSTALL_LIST = [
-    "tflite-runtime",
     "Flask",
     "imutils",
     "qrcode",
@@ -192,17 +188,27 @@ PIP_INSTALL_LIST = [
 
 # check whether mediapipe is supported
 is_mediapipe_supported = False
-if os_bit == 64 and raspbain_version >= 11:
+if os_bit == 64 and raspbain_version >= 11 and python_version[0] == 3 and python_version[1] < 13:
     is_mediapipe_supported = True
     PIP_INSTALL_LIST.append("mediapipe")
 else:
     is_mediapipe_supported = False
-    warn("mediapipe is only supported on 64bit system.")
+    warn("mediapipe is only supported on 64bit system with python 3.12 or older.")
 
 if raspbain_version > 11:
     PIP_INSTALL_LIST.append("numpy")
 else:
     PIP_INSTALL_LIST.append("numpy==1.26.4")
+
+is_tensorflow_supported = False
+if python_version[0] == 3 and python_version[1] < 13:
+    is_tensorflow_supported = True
+    PIP_INSTALL_LIST.append("tflite-runtime")
+    APT_INSTALL_LIST.append("libatlas-base-dev")
+    APT_INSTALL_LIST.append("libhdf5-130")
+else:
+    is_tensorflow_supported = False
+    warn("tflite-runtime is only supported on python 3.12 or older.")
 
 # main function
 # =================================================================
@@ -252,9 +258,7 @@ def install():
         if _is_bsps != '': # if true
             print("\033[38;5;8m pip3 install with --break-system-packages\033[0m")
         # update pip
-        do(msg="update pip3",
-            cmd=f'python3 -m pip install --upgrade pip {_is_bsps}'
-        )
+        do(msg="update pip3", cmd="apt-get upgrade -y python3-pip")
         for dep in PIP_INSTALL_LIST:
             if dep.endswith('.whl'):
                 dep_name = dep.split("/")[-1]
@@ -265,6 +269,8 @@ def install():
         #
         if is_mediapipe_supported == False:
             print('\033[38;5;8m  mediapipe is not supported on this platform... Skip \033[0m')
+        if is_tensorflow_supported == False:
+            print('\033[38;5;8m  ai-edge-litert is not supported on this platform... Skip \033[0m')
 
     print("Create workspace")
     # ===================================
