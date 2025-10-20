@@ -757,8 +757,9 @@ class Vilib(object):
     @staticmethod
     def object_detect_switch(flag=False):
         Vilib.objects_detect_sw = flag
-        from .objects_detection import object_detection_list_parameter
-        Vilib.object_detection_list_parameter = object_detection_list_parameter
+        if Vilib.objects_detect_sw == True:
+            from .objects_detection import object_detection_list_parameter
+            Vilib.object_detection_list_parameter = object_detection_list_parameter
 
     @staticmethod
     def object_detect_set_model(path):
