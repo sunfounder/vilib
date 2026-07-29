@@ -329,19 +329,32 @@ class Vilib(object):
                 # ----------- display on desktop ----------------
                 if Vilib.imshow_flag == True:
                     try:
+                        # Check if main window was closed by user.
+                        # getWindowProperty returns -1 if window doesn't exist yet
+                        # (first frame), 0 if closed, >=1 if visible.
+                        # If window was created then closed: disable local display,
+                        # keep camera running for web display. Continue to next frame.
                         try:
                             prop = cv2.getWindowProperty(Vilib.Windows_Name, cv2.WND_PROP_VISIBLE)
-                            qrcode_prop = cv2.getWindowProperty(Vilib.qrcode_win_name, cv2.WND_PROP_VISIBLE)
-                            if prop < 1 or qrcode_prop < 1:
-                                break
-                        except:
-                            pass
+                        except Exception:
+                            prop = -1
+
+                        if prop == 0:
+                            # Window was open but user closed it
+                            Vilib.imshow_flag = False
+                            print("Local display window closed.")
+                            continue
 
                         cv2.imshow(Vilib.Windows_Name, Vilib.img)
 
                         if Vilib.imshow_qrcode_flag and Vilib.qrcode_making_completed:
                                 Vilib.qrcode_making_completed = False
-                                cv2.imshow(Vilib.qrcode_win_name, Vilib.qrcode_img)
+                                try:
+                                    qrcode_prop = cv2.getWindowProperty(Vilib.qrcode_win_name, cv2.WND_PROP_VISIBLE)
+                                except Exception:
+                                    qrcode_prop = -1
+                                if qrcode_prop != 0:
+                                    cv2.imshow(Vilib.qrcode_win_name, Vilib.qrcode_img)
 
                         cv2.waitKey(1)
 
@@ -369,7 +382,7 @@ class Vilib(object):
         Vilib.camera_hflip = hflip
         Vilib.camera_vflip = vflip
         Vilib.camera_thread = threading.Thread(target=Vilib.camera, name="vilib")
-        Vilib.camera_thread.daemon = False
+        Vilib.camera_thread.daemon = True
         Vilib.camera_thread.start()
         while not Vilib.camera_run:
             time.sleep(0.1)
