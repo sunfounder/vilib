@@ -361,7 +361,7 @@ class Vilib(object):
                     except Exception as e:
                         Vilib.imshow_flag = False
                         print(f"imshow failed:\n  {e}")
-                        break
+                        continue
 
                 # ----------- exit ----------------
                 if Vilib.camera_run == False:
