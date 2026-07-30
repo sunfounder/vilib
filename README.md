@@ -29,7 +29,7 @@ Download this repository to your Raspberry Pi:
 
 ```bash
 cd ~
-git clone -b picamera2 https://github.com/sunfounder/vilib.git --depth 1
+git clone https://github.com/sunfounder/vilib.git --depth 1
 ```
 
 Install
