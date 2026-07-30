@@ -1,5 +1,13 @@
 # Change Log
 
+## [0.3.19] - 2026-07-30
+
+### Fixed
+
+- Fix display freeze caused by imshow exception breaking the main loop
+
+## [0.3.18] - 2025-01-01
+
 ## [0.3.2] - 2024-6-17
 
 ### Optimized
