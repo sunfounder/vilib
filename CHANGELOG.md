@@ -1,5 +1,11 @@
 # Change Log
 
+## [0.3.20] - 2026-10-08
+
+### Fixed
+
+- Pin NumPy to 1.26.4 on Debian 12 (bookworm) and older: the installer used to run `pip3 install numpy` with no version constraint, which installed NumPy 2.x into /usr/local and shadowed the system NumPy 1.x, breaking `import picamera2` / vilib with `ValueError: numpy.dtype size changed, may indicate binary incompatibility. Expected 96 from C header, got 88 from PyObject` (the apt simplejpeg is built against NumPy 1.x)
+
 ## [0.3.19] - 2026-07-30
 
 ### Fixed

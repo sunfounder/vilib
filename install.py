@@ -195,9 +195,15 @@ else:
     is_mediapipe_supported = False
     warn("mediapipe is only supported on 64bit system with python 3.12 or older.")
 
-if raspbain_version > 11:
+if raspbain_version >= 13:
+    # Debian 13 (trixie) and later ship NumPy 2.x, which matches the simplejpeg
+    # apt package built against the system NumPy.
     PIP_INSTALL_LIST.append("numpy")
 else:
+    # Debian <= 12 (bullseye / bookworm) still ships NumPy 1.x (bookworm: 1.24.2),
+    # and the apt simplejpeg used by picamera2 is built against it. A pip-installed
+    # NumPy 2.x in /usr/local shadows the system NumPy and breaks "import picamera2"
+    # (ValueError: numpy.dtype size changed). mediapipe itself also requires numpy<2.
     PIP_INSTALL_LIST.append("numpy==1.26.4")
 
 is_tensorflow_supported = False
