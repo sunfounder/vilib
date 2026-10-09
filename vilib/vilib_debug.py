@@ -247,24 +247,9 @@ class Vilib(object):
 
         picam2 = Vilib.picam2
 
-        # Ensure we have a fresh configuration
-        try:
-            preview_config = picam2.preview_configuration
-            if preview_config is None:
-                # Create new configuration if needed
-                config = picam2.create_preview_configuration()
-                picam2.configure(config)
-                preview_config = picam2.preview_configuration
-        except Exception as e:
-            print(f"Error getting preview configuration: {e}")
-            # Try to create a new configuration
-            config = picam2.create_preview_configuration()
-            picam2.configure(config)
-            preview_config = picam2.preview_configuration
-        
+        preview_config = picam2.preview_configuration
         # preview_config.size = (800, 600)
-        if preview_config is not None:
-            preview_config.size = Vilib.camera_size
+        preview_config.size = Vilib.camera_size
         preview_config.format = 'RGB888'  # 'XRGB8888', 'XBGR8888', 'RGB888', 'BGR888', 'YUV420'
         preview_config.transform = libcamera.Transform(
                                         hflip=Vilib.camera_hflip,
@@ -344,39 +329,26 @@ class Vilib(object):
                 # ----------- display on desktop ----------------
                 if Vilib.imshow_flag == True:
                     try:
-                        # Check if main window was closed by user.
-                        # getWindowProperty returns -1 if window doesn't exist yet
-                        # (first frame), 0 if closed, >=1 if visible.
-                        # If window was created then closed: disable local display,
-                        # keep camera running for web display. Continue to next frame.
                         try:
                             prop = cv2.getWindowProperty(Vilib.Windows_Name, cv2.WND_PROP_VISIBLE)
-                        except Exception:
-                            prop = -1
-
-                        if prop == 0:
-                            # Window was open but user closed it
-                            Vilib.imshow_flag = False
-                            print("Local display window closed.")
-                            continue
+                            qrcode_prop = cv2.getWindowProperty(Vilib.qrcode_win_name, cv2.WND_PROP_VISIBLE)
+                            if prop < 1 or qrcode_prop < 1:
+                                break
+                        except:
+                            pass
 
                         cv2.imshow(Vilib.Windows_Name, Vilib.img)
 
                         if Vilib.imshow_qrcode_flag and Vilib.qrcode_making_completed:
                                 Vilib.qrcode_making_completed = False
-                                try:
-                                    qrcode_prop = cv2.getWindowProperty(Vilib.qrcode_win_name, cv2.WND_PROP_VISIBLE)
-                                except Exception:
-                                    qrcode_prop = -1
-                                if qrcode_prop != 0:
-                                    cv2.imshow(Vilib.qrcode_win_name, Vilib.qrcode_img)
+                                cv2.imshow(Vilib.qrcode_win_name, Vilib.qrcode_img)
 
                         cv2.waitKey(1)
 
                     except Exception as e:
                         Vilib.imshow_flag = False
                         print(f"imshow failed:\n  {e}")
-                        continue
+                        break
 
                 # ----------- exit ----------------
                 if Vilib.camera_run == False:
@@ -397,7 +369,7 @@ class Vilib(object):
         Vilib.camera_hflip = hflip
         Vilib.camera_vflip = vflip
         Vilib.camera_thread = threading.Thread(target=Vilib.camera, name="vilib")
-        Vilib.camera_thread.daemon = True
+        Vilib.camera_thread.daemon = False
         Vilib.camera_thread.start()
         while not Vilib.camera_run:
             time.sleep(0.1)
@@ -406,31 +378,36 @@ class Vilib(object):
     def camera_close():
         if Vilib.camera_thread != None:
             Vilib.camera_run = False
-            time.sleep(0.2)
+            time.sleep(0.1)
             # Wait for camera thread to finish
             if Vilib.camera_thread.is_alive():
-                Vilib.camera_thread.join(timeout=3.0)
+                Vilib.camera_thread.join(timeout=2.0)
             
             # Properly close and reinitialize Picamera2
             try:
                 if Vilib.picam2 is not None:
                     Vilib.picam2.close()
-                    time.sleep(0.2)
+                    time.sleep(0.1)
                     
                 # Recreate Picamera2 object completely fresh
                 Vilib.picam2 = Picamera2()
                 
+                # Create and configure a default preview configuration
+                preview_config = Vilib.picam2.create_preview_configuration()
+                Vilib.picam2.configure(preview_config)
+                
             except Exception as e:
                 print(f"Warning during camera cleanup: {e}")
-                # Force recreation of Picamera2 object
+                # Force recreation of Picamera2 object with basic setup
                 try:
                     Vilib.picam2 = Picamera2()
+                    preview_config = Vilib.picam2.create_preview_configuration()
+                    Vilib.picam2.configure(preview_config)
                 except Exception as e2:
                     print(f"Failed to reinitialize camera: {e2}")
             
             # Reset thread reference
             Vilib.camera_thread = None
-
     @staticmethod
     def display(local=True, web=True):
         # cheack camera thread is_alive
