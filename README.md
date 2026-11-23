@@ -39,6 +39,17 @@ cd ~/vilib
 sudo python3 install.py 
 ```
 
+By default the installer skips the optional AI packages (`mediapipe`, `tflite-runtime`) and their system libraries, so a product that does not use hands detection, pose detection, object detection or image classification installs faster and never shows a "mediapipe is not supported" warning.
+
+If your product does use those AI features, add `--all`:
+
+```bash
+cd ~/vilib
+sudo python3 install.py --all
+```
+
+On a system that can not run them (for example Debian 13 with Python 3.13), `--all` still installs everything else and prints a warning saying that the AI features are unavailable.
+
 ## Usage
 
 ```bash

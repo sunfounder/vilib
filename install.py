@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-from distutils.log import warn
 import os, sys
 import time
 import threading
@@ -33,13 +32,17 @@ if os.geteuid() != 0:
 # =================================================================
 errors = []
 
-avaiable_options = ['-h', '--help', '--no-dep']
+avaiable_options = ['-h', '--help', '--no-dep', '--all']
 
 usage = '''
 Usage:
     sudo python3 install.py [option]
 
 Options:
+               --all       Install everything, including the optional AI
+                           dependencies (mediapipe, tflite-runtime). Only
+                           products that use hands / pose / object detection
+                           or image classification need this.
                --no-dep    Do not download dependencies
     -h         --help      Show this help text and exit
 '''
@@ -146,6 +149,7 @@ if raspbain_version <= 10:
 
 # Dependencies list installed with apt
 # =================================================================
+# Base dependencies: needed by every product.
 APT_INSTALL_LIST = [ 
     "python3-libcamera",
     # install python3-picamera2: https://datasheets.raspberrypi.com/camera/picamera2-manual.pdf
@@ -158,7 +162,15 @@ APT_INSTALL_LIST = [
     "opencv-data",
     # install ffmpeg
     "ffmpeg", 
-    # install mediapipe dependencies
+    # pyzbar (QR code / barcode recognition) needs the zbar shared library
+    # (Debian 13 provides it through libzbar0t64, the old name still resolves)
+    "libzbar0",
+]
+
+# Optional dependencies: only needed by the AI packages (mediapipe / tflite-runtime).
+# They are installed only when install.py is run with "--all", and only for the
+# package that this system can actually run, see prepare_optional_deps().
+MEDIAPIPE_APT_INSTALL_LIST = [
     "libgtk-3-0",
     "libxcb-shm0",
     "libcdio-paranoia-dev", 
@@ -170,9 +182,17 @@ APT_INSTALL_LIST = [
     "libvdpau1", 
     "libharfbuzz0b", 
     "libbluray2", 
-    "libzbar0",
     "libopenblas-dev",
 ]
+
+TFLITE_APT_INSTALL_LIST = [
+    # ATLAS was dropped in Debian 13; the tflite-runtime wheel does not need it
+    *(["libatlas-base-dev"] if raspbain_version < 13 else []),
+    "libhdf5-dev",
+]
+
+# Filled by prepare_optional_deps() when "--all" is used
+OPTIONAL_APT_INSTALL_LIST = []
 
 # Dependencies list installed with pip3
 # =================================================================
@@ -183,17 +203,11 @@ PIP_INSTALL_LIST = [
     "pyzbar", # pyzbar:one-dimensional barcodes and QR codes
     "pyzbar[scripts]",
     "readchar", # will update setuptools to the latest version
-    'protobuf>=3.20.0', # mediapipe need 
 ]
 
-# check whether mediapipe is supported
-is_mediapipe_supported = False
-if os_bit == 64 and raspbain_version >= 11 and python_version[0] == 3 and python_version[1] < 13:
-    is_mediapipe_supported = True
-    PIP_INSTALL_LIST.append("mediapipe")
-else:
-    is_mediapipe_supported = False
-    warn("mediapipe is only supported on 64bit system with python 3.12 or older.")
+# Optional pip dependencies: only needed by the AI features (mediapipe / tflite-runtime).
+# Filled by prepare_optional_deps(), installed only with "--all".
+OPTIONAL_PIP_INSTALL_LIST = []
 
 if raspbain_version >= 13:
     # Debian 13 (trixie) and later ship NumPy 2.x, which matches the simplejpeg
@@ -206,15 +220,31 @@ else:
     # (ValueError: numpy.dtype size changed). mediapipe itself also requires numpy<2.
     PIP_INSTALL_LIST.append("numpy==1.26.4")
 
-is_tensorflow_supported = False
-if python_version[0] == 3 and python_version[1] < 13:
-    is_tensorflow_supported = True
-    PIP_INSTALL_LIST.append("tflite-runtime")
-    APT_INSTALL_LIST.append("libatlas-base-dev")
-    APT_INSTALL_LIST.append("libhdf5-dev")
-else:
-    is_tensorflow_supported = False
-    warn("tflite-runtime is only supported on python 3.12 or older.")
+def prepare_optional_deps():
+    """Fill the optional dependency lists for this system.
+
+    Called only when install.py runs with "--all", so an ordinary installation
+    of a product that does not use the AI features stays free of warnings.
+    """
+    # check whether mediapipe is supported
+    if os_bit == 64 and raspbain_version >= 11 and python_version[0] == 3 and python_version[1] < 13:
+        OPTIONAL_PIP_INSTALL_LIST.append('protobuf>=3.20.0') # mediapipe need
+        OPTIONAL_PIP_INSTALL_LIST.append("mediapipe")
+        OPTIONAL_APT_INSTALL_LIST.extend(MEDIAPIPE_APT_INSTALL_LIST)
+    else:
+        warn("mediapipe is only supported on 64bit system with python 3.12 or older... Skip")
+
+    # check whether tflite-runtime is supported
+    if python_version[0] == 3 and python_version[1] < 13:
+        OPTIONAL_PIP_INSTALL_LIST.append("tflite-runtime")
+        OPTIONAL_APT_INSTALL_LIST.extend(TFLITE_APT_INSTALL_LIST)
+    else:
+        warn("tflite-runtime is only supported on python 3.12 or older... Skip")
+
+def pip_dep_name(dep):
+    if dep.endswith('.whl'):
+        return dep.split("/")[-1]
+    return dep
 
 # main function
 # =================================================================
@@ -266,17 +296,30 @@ def install():
         # update pip
         do(msg="update pip3", cmd="DEBIAN_FRONTEND=noninteractive apt-get install --only-upgrade -y python3-pip")
         for dep in PIP_INSTALL_LIST:
-            if dep.endswith('.whl'):
-                dep_name = dep.split("/")[-1]
-            else:
-                dep_name = dep
+            dep_name = pip_dep_name(dep)
             do(msg=f"install {dep_name}",
                 cmd=f'pip3 install {dep} {_is_bsps}')
-        #
-        if is_mediapipe_supported == False:
-            print('\033[38;5;8m  mediapipe is not supported on this platform... Skip \033[0m')
-        if is_tensorflow_supported == False:
-            print('\033[38;5;8m  ai-edge-litert is not supported on this platform... Skip \033[0m')
+
+        # install optional AI dependencies
+        # ===================================
+        # mediapipe / tflite-runtime are only installed on request, so products
+        # that do not use them never see a "not supported" warning.
+        if "--all" in options:
+            prepare_optional_deps()
+            if len(OPTIONAL_APT_INSTALL_LIST) > 0:
+                print("apt install optional AI dependency (--all):")
+                for dep in OPTIONAL_APT_INSTALL_LIST:
+                    do(msg=f"install {dep}",
+                        cmd=f'DEBIAN_FRONTEND=noninteractive apt-get install {dep} -y')
+            if len(OPTIONAL_PIP_INSTALL_LIST) > 0:
+                print("pip3 install optional AI dependency (--all):")
+                for dep in OPTIONAL_PIP_INSTALL_LIST:
+                    dep_name = pip_dep_name(dep)
+                    do(msg=f"install {dep_name}",
+                        cmd=f'pip3 install {dep} {_is_bsps}')
+        else:
+            print('\033[38;5;8m  Optional AI features (mediapipe / tflite-runtime) are not installed.'
+                  ' Re-run with "--all" if your product needs them. \033[0m')
 
     print("Create workspace")
     # ===================================
