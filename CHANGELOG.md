@@ -1,5 +1,17 @@
 # Change Log
 
+## [0.4.0] - 2026-11-23
+
+### Changed
+
+- `install.py` installs the optional AI packages (`mediapipe`, `tflite-runtime`) and their system libraries only when it is run with `--all`. A plain `sudo python3 install.py` installs the base dependencies only and no longer prints the "mediapipe is only supported ..." warnings, because most products never use the AI features.
+- Products that do use hands detection, pose detection, object detection or image classification must install with `--all`. On a system that cannot run them, the two warnings are still printed and the rest of the installation continues.
+
+### Fixed
+
+- Remove the unused `from distutils.log import warn` import: it is dead code, and `import distutils` fails on Python 3.12+ systems that do not ship the setuptools shim.
+- Do not ask apt for `libatlas-base-dev` on Debian 13 and newer, where the package no longer exists.
+
 ## [0.3.20] - 2026-10-08
 
 ### Fixed
