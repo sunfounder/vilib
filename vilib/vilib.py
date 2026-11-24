@@ -247,9 +247,24 @@ class Vilib(object):
 
         picam2 = Vilib.picam2
 
-        preview_config = picam2.preview_configuration
+        # Ensure we have a fresh configuration
+        try:
+            preview_config = picam2.preview_configuration
+            if preview_config is None:
+                # Create new configuration if needed
+                config = picam2.create_preview_configuration()
+                picam2.configure(config)
+                preview_config = picam2.preview_configuration
+        except Exception as e:
+            print(f"Error getting preview configuration: {e}")
+            # Try to create a new configuration
+            config = picam2.create_preview_configuration()
+            picam2.configure(config)
+            preview_config = picam2.preview_configuration
+        
         # preview_config.size = (800, 600)
-        preview_config.size = Vilib.camera_size
+        if preview_config is not None:
+            preview_config.size = Vilib.camera_size
         preview_config.format = 'RGB888'  # 'XRGB8888', 'XBGR8888', 'RGB888', 'BGR888', 'YUV420'
         preview_config.transform = libcamera.Transform(
                                         hflip=Vilib.camera_hflip,
@@ -391,7 +406,30 @@ class Vilib(object):
     def camera_close():
         if Vilib.camera_thread != None:
             Vilib.camera_run = False
-            time.sleep(0.1)
+            time.sleep(0.2)
+            # Wait for camera thread to finish
+            if Vilib.camera_thread.is_alive():
+                Vilib.camera_thread.join(timeout=3.0)
+            
+            # Properly close and reinitialize Picamera2
+            try:
+                if Vilib.picam2 is not None:
+                    Vilib.picam2.close()
+                    time.sleep(0.2)
+                    
+                # Recreate Picamera2 object completely fresh
+                Vilib.picam2 = Picamera2()
+                
+            except Exception as e:
+                print(f"Warning during camera cleanup: {e}")
+                # Force recreation of Picamera2 object
+                try:
+                    Vilib.picam2 = Picamera2()
+                except Exception as e2:
+                    print(f"Failed to reinitialize camera: {e2}")
+            
+            # Reset thread reference
+            Vilib.camera_thread = None
 
     @staticmethod
     def display(local=True, web=True):
